@@ -21,7 +21,7 @@ jobs:
 
     - name: Verify decrypted file
       run: |
-        if diff -q project1/input.txt project1/input_dec.txt; then
+        if diff -q project1/input.txt project1/input_enc_dec.txt; then
           echo "Files match, encryption and decryption successful."
         else
           echo "Error: Files differ, encryption or decryption failed."
