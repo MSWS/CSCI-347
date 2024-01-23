@@ -99,7 +99,6 @@ int processFile(int fileIndex, int outputIndex, bool decode) {
             buffer[i] += decode ? -100 : 100;
 
         write(outputIndex, buffer, bytesRead);
-        bytesRead = read(fileIndex, buffer, BUFFER_SIZE);
     } while (bytesRead > 0);
     close(fileIndex);
     close(outputIndex);
