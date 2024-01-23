@@ -10,21 +10,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Navigate to project directory
-      run: cd project1
-
     - name: Build C file
-      run: gcc -o decrypt decrypt.c
+      run: gcc -o project1/decrypt project1/decrypt.c
 
     - name: Encrypt file
-      run: ./decrypt -e input.txt
+      run: project1/decrypt -e project1/input.txt
 
     - name: Decrypt file
-      run: ./decrypt -d input_enc.txt
+      run: project1/decrypt -d project1/input_enc.txt
 
     - name: Verify decrypted file
       run: |
-        if diff -q input.txt input_dec.txt; then
+        if diff -q project1/input.txt project1/input_dec.txt; then
           echo "Files match, encryption and decryption successful."
         else
           echo "Error: Files differ, encryption or decryption failed."
