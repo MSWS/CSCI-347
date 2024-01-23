@@ -1,0 +1,29 @@
+name: Encrypt and Decrypt
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build C file
+      run: gcc -o decrypt decrypt.c
+
+    - name: Encrypt file
+      run: ./decrypt -e input.txt
+
+    - name: Decrypt file
+      run: ./decrypt -d input_enc.txt
+
+    - name: Verify decrypted file
+      run: |
+        if diff -q input.txt input_dec.txt; then
+          echo "Files match, encryption and decryption successful."
+        else
+          echo "Error: Files differ, encryption or decryption failed."
+          exit 1
+        fi
