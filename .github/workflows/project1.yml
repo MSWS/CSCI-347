@@ -10,6 +10,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Navigate to project directory
+      run: cd project1
+
     - name: Build C file
       run: gcc -o decrypt decrypt.c
 
