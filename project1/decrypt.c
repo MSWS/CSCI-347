@@ -76,6 +76,9 @@ int processFileByPaths(
         return -1;
     }
 
+    free(strippedPath);
+    free(outputPath);
+
     return processFile(inputFile, outputFile, decode);
 }
 
