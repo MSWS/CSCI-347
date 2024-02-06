@@ -1,0 +1,33 @@
+name: Verify Memory Tests
+
+on:
+  push:
+    paths:
+      - 'assignments/memory/**'
+  pull_request:
+    paths:
+      - 'assignments/memory/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build C file
+      run: make -C assignments/memory/
+
+    - name: Run Tests
+      run: assignments/memory/test_filter > output.txt
+
+    - name: Verify output
+      run: |
+        output=$(cat output.txt)
+        if [[ "$output" == *"0 failed"* ]]; then
+          echo "Output verification passed"
+        else
+          echo "Output verification failed"
+          exit 1
+        fi    
