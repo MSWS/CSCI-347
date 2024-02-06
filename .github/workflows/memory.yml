@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - 'assignments/memory/**'
+      - '.github/workflows/memory.yml'
   pull_request:
     paths:
       - 'assignments/memory/**'
+      - '.github/workflows/memory.yml'
 
 jobs:
   build:

@@ -5,9 +5,11 @@ on:
   push:
     paths:
       - 'project1/**'
+      - '.github/workflows/project1.yml'
   pull_request:
     paths:
       - 'project1/**'
+      - '.github/workflows/project1.yml'
 
 jobs:
   build:
