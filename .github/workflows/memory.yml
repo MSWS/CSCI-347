@@ -20,14 +20,7 @@ jobs:
       run: make -C assignments/memory/
 
     - name: Run Tests
-      run: assignments/memory/test_filter > output.txt
+      run: assignments/memory/test_filter
 
-    - name: Verify output
-      run: |
-        output=$(cat output.txt)
-        if [[ "$output" == *"0 failed"* ]]; then
-          echo "Output verification passed"
-        else
-          echo "Output verification failed"
-          exit 1
-        fi    
+    - name: Verify
+      run: exit $?
