@@ -13,6 +13,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdbool.h>
+#include <pwd.h>
 
 //Prototypes
 static void exitProgram(char** args, int argcp);
@@ -147,6 +148,14 @@ static void lsIndividual(struct dirent *dirEntry, int bitfield) {
 	}
 	printf("%c", filetypeletter(fileStat.st_mode));
 	printFilePerms(fileStat.st_mode);
+  printf(" %d", fileStat.st_nlink);
+
+  struct passwd *pwd = getpwuid(fileStat.st_uid);
+	if(pwd == NULL)
+		printf("%-8.8s", pwd->pw_name);
+	else
+		printf("%8d", fileStat.st_uid);
+
 	printf(" %s\n", dirEntry->d_name);
 }
 
