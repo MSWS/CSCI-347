@@ -47,7 +47,7 @@ static bool prefix(char *s, char *pre) {
  *****
  */
 char* filter_ch_ptr(char *string, char ch) {
-	char* copy = (char*) malloc((strlen(string) + 1) * sizeof(char));
+	char* copy = (char*) malloc(strlen(string) + 1);
 	if (copy == NULL)
 		return NULL;
 
@@ -65,9 +65,8 @@ char* filter_ch_ptr(char *string, char ch) {
 	*(copy_index) = '\0';
 
 	// Re-allocate copy to be minimum size
-	char* resized_copy = (char*) realloc(copy, (strlen(copy) + 1) * sizeof(char));
-	free(copy);
-	return resized_copy;
+	copy = (char*) realloc(copy, strlen(copy) + 1);
+	return copy;
 }
 
 
@@ -82,7 +81,7 @@ char* filter_ch_ptr(char *string, char ch) {
  *****
  */
 char* filter_any_ptr(char *string, char* remove) {
-	char* copy = (char*) malloc((strlen(string) + 1) * sizeof(char));
+	char* copy = (char*) malloc(strlen(string) + 1);
 
 	if(copy == NULL)
 		return NULL;
@@ -112,7 +111,7 @@ char* filter_any_ptr(char *string, char* remove) {
  *****
  */
 char *filter_substr(char *string, char* substr) {
-	char* copy = (char *) malloc((strlen(string) + 1) * sizeof(char));
+	char* copy = (char *) malloc(strlen(string) + 1);
 
 	if(copy == NULL)
 		return NULL;
