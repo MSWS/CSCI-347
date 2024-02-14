@@ -1,0 +1,290 @@
+\documentclass[10pt]{article}
+
+\usepackage[tmargin=0.1in, bmargin=0.25in, lmargin = 0.1in, rmargin = 0.25in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{pstricks}
+\usepackage{tikz}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+    \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+    \hskip -\arraycolsep
+    \let\@ifnextchar\new@ifnextchar
+    \array{#1}}
+\makeatother
+
+\begin{document}
+\footnotesize
+\begin{multicols}{2}
+    \begin{minipage}{0.8\columnwidth}
+        \vspace*{-70em}
+        \section*{UNIX File System}
+        \begin{itemize}
+            \setlength\itemsep{0em}
+            \item Boot block: contains bootstrap code to boot OS
+            \item Super block: describes state of file system size, how many files, location of free space
+            \item Inode list: list of inodes
+            \item Data blocks: contains file data
+        \end{itemize}
+        \setlength\itemsep{-0.3em}
+        \subsubsection*{Inodes consist of}
+        \begin{itemize}
+            \setlength\itemsep{0em}
+            \item File owner
+            \item File type
+            \item Access permissions (rw-r--r--)
+            \item Size / \# of blocks
+            \item Access, Modify, and Status Time Change
+            \item Access to data blocks (n data block pointers)
+        \end{itemize}
+        \vspace*{-2em}
+        \subsection*{stat(2)}
+        Obtains information about the file pointed to by \textit{path}
+        (or in the case of fstat(2), fd).
+        If \textit{path} is a symlink, returns info about the link itself.
+        \begin{lstlisting}
+struct stat {
+    mode_t st_mode; /* file type & mode (permissions) */
+    ino_t st_ino; /* i-node number (serial number) */
+    dev_t st_dev; /* device number (file system) */
+    dev_t st_rdev; /* device number for special files */
+    nlink_t st_nlink; /* number of links */
+    uid_t st_uid; /* user ID of owner */
+    gid_t st_gid; /* group ID of owner */
+    off_t st_size; /* size in bytes, for regular files */
+    struct timespec st_atim; /* last access time */
+    struct timespec st_mtim; /* last modification time */
+    struct timespec st_ctim; /* file status change time*/
+    blksize_t st_blksize; /* best I/O block size */
+    blkcnt_t st_blocks; /* # disk blocks allocated */
+}
+
+#include <sys/stat.h>
+int stat(const char *path, struct stat *sb);
+int lstat(const char *path, struct stat *sb);
+int fstat(int fd, struct stat *sb);
+        \end{lstlisting}
+        \paragraph*{st\_mode}
+        \begin{description}
+            \item[regular] - most comon, interpretation is up to app
+            \item[directory] - contains names of other files and pointer to said info
+            \item[char special] - used for certain types of devices (eg terminal)
+            \item[block special] - used for disk devices
+            \item[FIFO] - used for interprocess communication
+            \item[socket] - used for network and non-network communication
+            \item[symbolic link] - points to another file
+        \end{description}
+        \subsubsection*{st\_uid, st\_guid}
+        Every process has six or more IDs associated with it.
+        st\_uid and st\_gid always specify the user owner and group owner of a file
+        \begin{tabular}{ll}
+            \hline
+            real user/group ID                        & who we really are          \\
+            effective user/group ID / extra group IDs & used for file access perms \\
+            saved set-user-ID / saved set-group-ID    & saved by exec funcs        \\
+        \end{tabular}
+        \subsubsection*{Access Tests Performed by Kernel:}
+        \begin{enumerate}
+            \item e-uid == 0 (root), access granted
+            \item e-uid == st\_uid, access granted if user permission set
+            \item e-gid == st\_gid, access granted if group permission set
+            \item other permission bit set, access granted
+            \item access denied
+        \end{enumerate}
+    \end{minipage}
+    \begin{minipage}{\columnwidth}
+        \vspace*{3em}
+        \begin{flushright}
+            \subsection*{chmod(2), lchmod(2), fchmod(2)}
+            Changes the permission bits on the file.
+            \footnotesize
+            \begin{lstlisting}
+#include <sys/stat.h>
+#include <fcntl.h>
+int chmod(const char *path, mode_t mode);
+int lchmod(const char *path, mode_t mode);
+int fchmod(const char *path, mode_t mode);
+int fchmodat(int fd, const char *path, mode_t mode, int flag);
+returns 0 if OK, -1 on error
+            \end{lstlisting}
+            \vspace*{-1em}
+            \section*{Standard I/O}
+            \begin{multicols*}{2}
+                \begin{itemize}
+                    \item 3 streams automatically created
+                          \begin{itemize}
+                              \item STDIN\_FILENO
+                              \item STDOUT\_FILENO
+                              \item STDERR\_FILENO
+                          \end{itemize}
+                          \columnbreak
+                    \item These three are referenced as \textbf{stdin}, \textbf{stdout}
+                          , and \textbf{stderr}.
+                    \item Defined in stdio.h
+                \end{itemize}
+            \end{multicols*}
+            \vspace*{-5em}
+            \subsection*{Streams and FILEs}
+            \begin{multicols*}{2}
+                \begin{itemize}
+                    \item fopen() returns pointed to FILE object
+                          \begin{itemize}
+                              \item File descripter
+                              \item Pointer to stream buffer
+                              \item Buffer size
+                              \item Number of chars in buffer
+                              \item Error flag
+                          \end{itemize}
+                          \columnbreak
+                    \item Applications need not examine FILE object
+                    \item Pass FILE pointer as argument to standard I/O funcs
+                    \item FILE * is called file pointer
+                \end{itemize}
+            \end{multicols*}
+            \subsubsection*{Six ways to open standard I/O stream}
+            \begin{tabular}{|c|c|c|c|c|c|c|}
+                \hline
+                Restriction                 & r         & w         & a         & r+        & w+        & a+        \\
+                \hline
+                \hline
+                File must already exist     & $\bullet$ &           &           & $\bullet$ &           &           \\
+                Previous contents discarded &           & $\bullet$ &           &           & $\bullet$ &           \\
+                \hline
+                Readable                    & $\bullet$ &           &           & $\bullet$ & $\bullet$ & $\bullet$ \\
+                Writable                    &           & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+                Readable at end of file     &           &           & $\bullet$ &           &           & $\bullet$ \\
+                \hline
+            \end{tabular}
+            \begin{tabular}{|c|c|c|}
+                \hline
+                \textit{type}               & Description                        & open(2) Flags                         \\
+                \hline
+                \hline
+                \textbf{r} or \textbf{rb}   & Reading                            & \lstinline|O_RDONLY|                  \\
+                \textbf{w} or \textbf{wb}   & Writing                            & \lstinline!O_WRONLY|O_CREAT|O_TRUNC!  \\
+                \textbf{a} or \textbf{ab}   & Create for append                  & \lstinline!O_WRONLY|O_CREAT|O_APPEND! \\
+                \textbf{r+} or \textbf{rb+} & Update (reading and writing)       & \lstinline!O_RDWR!                    \\
+                \textbf{w+} or \textbf{wb+} & Create/Erase and append            & \lstinline!O_RDWR|O_CREAT|O_TRUNC!    \\
+                \textbf{a+} or \textbf{ab+} & Open/Create for reading and append & \lstinline!O_RDWR|O_CREAT|O_APPEND!   \\
+                \hline
+            \end{tabular}
+            \subsection*{Buffering}
+            \begin{itemize}
+                \item The goal of buffering is to use minimum \# of read/write calls.
+                \item Three types:
+                      \begin{itemize}
+                          \item Fully Buffered: I/O performed when buffer is full
+                          \item Line Buffered: I/O performed when newline is encountered
+                          \item Unbuffered: I/O performed immediately
+                      \end{itemize}
+            \end{itemize}
+            \subsubsection*{setbuf(): turns buffering on/off}
+            \begin{lstlisting}
+                void setbuf(FILE *fp, char *buf);
+                - a buffer of length BUFSIZ (stdio.h)
+                - NULL (disable buffering)
+            \end{lstlisting}
+            \subsubsection*{fclose: close an open stream}
+            \begin{lstlisting}
+                int fclose(FILE *fp);
+                - Output buffer data is flushed
+                - Input buffer data is discarded
+                - Automatically allocated buffer is released
+                - returns 0 if OK, EOF on error
+            \end{lstlisting}
+            \vspace*{-1em}
+            \subsection*{3 types of Unformatted I/O}
+            \begin{description}
+                \item[Character-at-a-time]: getc, fgetc, getchar
+                \item[Line-at-a-time]: fgets, fputs
+                \item[Direct]: fread, fwrite
+            \end{description}
+            \subsection*{Methods}
+            \textbf{Bisection Method}
+            \begin{enumerate}
+                \item Choose \(a\), \(b\) such that \(f(a) \cdot f(b) < 0\)
+                \item Compute \(c = \frac{a+b}{2}\)
+                \item If \(f(c)\) and \(f(a)\) have opposite signs, then \(b = c\)
+                \item If \(f(c)\) and \(f(b)\) have opposite signs, then \(a = c\)
+                \item If \(|b - a| < \epsilon\) or \(f(c) = 0\) then \(c\) is the solution
+            \end{enumerate}
+            \begin{equation*}
+                \begin{aligned}
+                    \text{Error} = \frac{b - a}{2^{n + 1}}                                                         & \\
+                    \text{Steps(\(\epsilon\))} = \bigl\lceil \frac{\ln(b-a) - \ln(\epsilon)}{\ln(2)}-1 \bigr\rceil &
+                \end{aligned}
+            \end{equation*}
+            \textbf{Newton's Method}
+            \begin{enumerate}
+                \item \(x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}\)
+                \item If \(|x_n - x_{n-1}| < \epsilon\) or \(f(x_n) = 0\) then \(x_n\) is the solution
+            \end{enumerate}
+            Multiplicity
+            \begin{equation*}
+                \begin{aligned}
+                    \text{If } f^{(m-1)}(r_0) = 0 \text{ and } f^{(m)}(r_0) \neq 0 \text{,} & \\
+                    \text{then } f^{(m)}(r_0) \text{ is a root of multiplicity } m          &
+                \end{aligned}
+            \end{equation*}
+            Convergence
+            \vspace*{-1em}
+            \setlength{\columnsep}{-1in}
+            \begin{multicols}{2}
+                \begin{minipage}{1in}
+                    \(m = 1\)
+                    \begin{equation*}
+                        \begin{aligned}
+                             & M = \frac{1}{2} \left| \frac{f''(r_0)}{f'(r_0)} \right| \\
+                             & e_{i+1} \approx Me_i^2                                  \\
+                        \end{aligned}
+                    \end{equation*}
+                \end{minipage} \\
+                \begin{minipage}{1in}
+                    \(m > 1\)
+                    \begin{equation*}
+                        \begin{aligned}
+                            e_{i+1} \approx \frac{m-1}{m} e_i
+                        \end{aligned}
+                    \end{equation*}
+                \end{minipage}
+            \end{multicols}
+            \textbf{Secant Method}
+            \begin{equation*}
+                x_{n+1} = x_n - f(x_n)\frac{x_n - x_{n-1}}{f(x_n) - f(x_{n-1})}
+            \end{equation*}
+            Convergence
+            \begin{equation*}
+                \begin{aligned}
+                    e_{i+1} \approx Me_i^p                            & \\
+                    p = \frac{1 + \sqrt{5}}{2} \text{ (Golden Ratio)} &
+                \end{aligned}
+            \end{equation*}
+            \textbf{False Position Method} \\
+            Same as Bisection Method, but
+            \begin{equation*}
+                c = a - \frac{f(a) (b-a)}{f(b) - f(a)}
+            \end{equation*}
+            Convergence - Generally same as Bisection \\
+            \textbf{Fixed Point Iteration}
+            \begin{enumerate}
+                \item Solve \(f(x)\) for \(x = g(x)\) \\
+                      \begin{align*}
+                          g(x) = 2.8x - x^2 = x \\
+                          1.8x -x^2 = 0         \\
+                          x(1.8 - x) = 0        \\
+                          x = 0, 1.8
+                      \end{align*}
+                      \begin{align*}
+                          f(x) = 2x^3 - 6x - 1 \\
+                          g(x) = \frac{2x^3-1}{6}
+                      \end{align*}
+                \item If \(|g'(r_n)| < 1\), fixed point will converge to \(r_n\)
+            \end{enumerate}
+        \end{flushright}
+    \end{minipage}
+\end{multicols}
+\end{document}

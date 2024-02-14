@@ -1,0 +1,300 @@
+\documentclass[10pt]{article}
+
+\usepackage[tmargin=0.1in, bmargin=0.25in, lmargin = 0.1in, rmargin = 0.25in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{pstricks}
+\usepackage{tikz}
+\usepackage{makecell}
+\usepackage{caption}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+    \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+    \hskip -\arraycolsep
+    \let\@ifnextchar\new@ifnextchar
+    \array{#1}}
+\makeatother
+
+\begin{document}
+\scriptsize
+\begin{multicols}{2}
+    \begin{minipage}{\columnwidth}
+        \subsection*{Password File}
+        \begin{itemize}[leftmargin=*]
+            \setlength{\itemsep}{0em}
+            \item ASCII text: /etc/passwd
+            \item Passed structure in <pwd.h>
+            \item \textbf{root}: superuser, UID=0\\root:x:0:0:root:/root:/bin/bash
+            \item \textbf{guest}: no privileges\\nobody:x:65534:35534:Nobody:/home/bin/sh
+            \item normal account\\elglaly:x:115:125:Yasmine Elg:/home/elglaly:/bin/bash
+            \item Encrypted passwords /etc/shadow or /etc/master.passwd
+            \item Shadow is readable only by root
+            \item /etc/passwd is world-readable
+            \item Cannot access encrypted passwords!
+        \end{itemize}
+        \subsection*{Group File}
+        \begin{multicols*}{2}
+            \begin{minipage}{0.5\columnwidth}
+                \begin{itemize}[leftmargin=*]
+                    \setlength{\itemsep}{0em}
+                    \item /etc/group
+                          \begin{itemize}
+                              \item wheel (BSD)
+                              \item gid 0
+                          \end{itemize}
+                \end{itemize}
+            \end{minipage}
+            \columnbreak
+            \begin{minipage}{0.3\columnwidth}
+                \begin{tabular}{|c|c|}
+                    \hline
+                    Description        & \makecell{struct group      \\member} \\
+                    \hline \hline
+                    group name         & \lstinline|char *gr_name|   \\
+                    encrypted password & \lstinline|char *gr_passwd| \\
+                    group ID           & \lstinline|int gr_gid|      \\
+                    array to names     & \lstinline|char **gr_mem|   \\
+                    \hline
+                \end{tabular}
+            \end{minipage}
+        \end{multicols*}
+        % \vspace*{1.5em}
+        % \begin{tabular}{|c|c|cccc|}
+        %     \hline
+        %     Description        & POSIX.1    & \makecell{FreeBSD                                        \\ 8.0} & \makecell{Linux\\3.2.0} & \makecell{Mac OS X\\10.6.8} & \makecell{Solaris\\10} \\
+        %     \hline \hline
+        %     group name         & $\bullet $ & $\bullet $        & $\bullet $ & $\bullet $ & $\bullet $ \\
+        %     encrypted password &            & $\bullet $        & $\bullet $ & $\bullet $ & $\bullet $ \\
+        %     group ID           & $\bullet $ & $\bullet $        & $\bullet $ & $\bullet $ & $\bullet $ \\
+        %     array to names     & $\bullet $ & $\bullet $        & $\bullet $ & $\bullet $ & $\bullet $ \\
+        %     \hline
+        % \end{tabular}
+        \subsection*{Group Info}
+        \begin{lstlisting}
+#include <grp.h>
+struct group *getgrgid(gid_t gid);
+struct group *getgrnam(const char *name);
+       Return: pointer if OK, NULL on error
+struct group *getgrent(void); // read next entry
+       Returns: pointer if OK, NULL on error/EOF
+void setgrent(void); //rewind group file
+void endgrent(void); // close group file
+        \end{lstlisting}
+        % struct group {
+        %     char *gr_name; /* group name */
+        %     char *gr_passwd; /* group password */
+        %     gid_t gr_gid; /* group id */
+        %     char **gr_mem; /* group members */
+        % };
+        \textbf{Supplementary}
+        \begin{lstlisting}
+#include <unistd.h>
+int getgroups(int gidsetsize, gid_t grouplist[]);
+    //Fills grouplist with gidsetsize group IDs
+       Returns: #supp GIDs if OK, -1 on error
+
+#include <grp.h> //on Linux
+#include <unistd.h> //on FreeBSD, Mac OS X, Solaris
+int setgroups(int ngroups, const gid_t grouplist[]);
+    //set supplementary GID for calling process
+int initgroups(const char *username, gid_t basegid);
+//reads entire group file (getgrent, setgrent, endgrent)
+       Both return: 0 if OK, -1 on error 
+        \end{lstlisting}
+        \begin{lstlisting}
+struct passwd { /* Linux version */
+    char *pw_name;  /* username */
+    char *pw_passwd; /* encrypted password */
+    uid_t pw_uid;   /* user ID */
+    gid_t pw_gid;   /* group ID */
+    char *pw_gecos; /* general info */
+    char *pw_dir;   /* home directory */
+    char *pw_shell; /* shell program */
+};
+        \end{lstlisting}
+        \vspace*{-2em}
+        \subsubsection*{Memory Allocation - Space Calculations}
+        \textbf{sizeof} for basic types \\
+        \begin{tabular}{ll}
+            \hline
+            \lstinline|sizeof(char)|    & = 1     \\
+            \lstinline|sizeof(short)|   & = 2     \\
+            \lstinline|sizeof(int)|     & = 4     \\
+            \lstinline|sizeof(float)|   & = 4     \\
+            \lstinline|sizeof(long)|    & = 8     \\
+            \lstinline|sizeof(double)|  & = 8     \\
+            \lstinline|sizeof(char *) | & = 4 / 8 \\
+            \hline
+        \end{tabular}
+        \\
+        \textbf{sizeof} for array types
+        \begin{lstlisting}
+double sample[100];
+sizeof(sample) = 100 * 8 = 800
+char string[81];
+sizeof(string) = 81 * 1 = 81
+        \end{lstlisting}
+        BUT
+        \begin{lstlisting}
+void foo(char buffer[81]) { . . . }
+sizeof(buffer); // = 4 or 8 !!
+\end{lstlisting}
+        Array arguments are really pointers!
+        \tiny
+        \begin{lstlisting}
+struct tm {
+    int tm_sec; /* Seconds (0-60) */
+    int tm_min; /* Minutes (0-59) */
+    int tm_hour; /* Hours (0-23) */
+    int tm_mday; /* Day of the month (1-31) */
+    int tm_mon; /* Month (0-11) */
+    int tm_year; /* Year - 1900 */
+    int tm_wday; /* Day of the week (0-6, Sunday = 0) */
+    int tm_yday; /* Day in the year (0-365, 1 Jan = 0) */
+    int tm_isdst; /* Daylight saving time */
+};
+\end{lstlisting}
+    \end{minipage}
+    \begin{minipage}{1.5\columnwidth}
+        \begin{multicols*}{2}
+            \hspace*{-9.5em}
+            \begin{minipage}{0.8\columnwidth}
+                \vspace*{-15em}
+                \textbf{Time [ctd.]}
+                \begin{lstlisting}
+char *asctime(const struct tm *tm);
+ Put date & time in standard format
+ Ex: fputs(asctime(localtime), stdout)
+ -> Wed Oct 21 13:02:36 2020
+strftime(3); // format options
+ e.g. full day name, replace day of
+ month by decimal
+ctime(3); // adjusts the time value for
+ the current time zone
+struct tm *localtime(const time_t *timep)
+ convert time to local time
+                \end{lstlisting}
+            \end{minipage}
+            \columnbreak
+            \begin{minipage}{0.5\columnwidth}
+                \captionof*{table}{Fields in \lstinline|/etc/shadow|}
+                \hspace*{3em}
+                \begin{tabular}{|c|c|c|}
+                    \hline
+                    Description             & \makecell{\lstinline|struct passwd| \\member} \\
+                    \hline \hline
+                    username                & \lstinline|char *pw_name|           \\
+                    encrypted password      & \lstinline|char *pw_passwd|         \\
+                    user ID                 & \lstinline|uid_t pw_uid|            \\
+                    group ID                & \lstinline|gid_t pw_gid|            \\
+                    comment                 & \lstinline|char *pw_gecos|          \\
+                    workding directory      & \lstinline|char *pw_dir|            \\
+                    shell program           & \lstinline|char *pw_shell|          \\
+                    access class            & \lstinline|char *pw_class|          \\
+                    time to change passwd   & \lstinline|time_t pw_change|        \\
+                    account expiration date & \lstinline|time_t pw_expire|        \\
+                    \hline
+                \end{tabular}
+                \captionof*{table}{Fields in \lstinline|/etc/passwd|}
+                \begin{tabular}{|c|c|c|}
+                    \hline
+                    Description                  & \makecell{\lstinline|struct spwd| \\member} \\
+                    \hline \hline
+                    user login name              & \lstinline|char *sp_namp|         \\
+                    encrypted password           & \lstinline|char *sp_pwdp|         \\
+                    date of last change          & \lstinline|int sp_lstchg|         \\
+                    days until change allowed    & \lstinline|int sp_min|            \\
+                    days until change required   & \lstinline|int sp_max|            \\
+                    days before warning          & \lstinline|int sp_warn|           \\
+                    days before account inactive & \lstinline|int sp_inact|          \\
+                    date when account expires    & \lstinline|int sp_expire|         \\
+                    reserved                     & \lstinline|unsigned int sp_flag|  \\
+                    \hline
+                \end{tabular}
+            \end{minipage}
+        \end{multicols*}
+    \end{minipage}
+    \begin{minipage}{\columnwidth}
+        \begin{flushright}
+            \vspace*{2em}
+            \subsection*{Program Access}
+            \textbf{Fetching Entries}
+            \begin{lstlisting}
+    #include <pwd.h>
+    struct passwd *getpwuid(uid_t uid); // used by ls
+    struct passwd *getpwnam(const char *name);
+                // used by login
+            Return: pointer to passwd struct if OK,
+                    NULL on error
+            \end{lstlisting}
+            \textbf{Iteration}
+            \begin{lstlisting}
+    struct passwd *getpwent(void);
+                // Opens necessary files
+            Return: pointer to passwd struct if OK,
+                    NULL on error/EOF
+    void setpwent(void); // rewinds files
+    void endpwent(void); // closes files
+            \end{lstlisting}
+            \textbf{Shadow Passwords}
+            \begin{lstlisting}
+    #include <shadow.h>
+    struct spwd *getspnam(const char *name);
+    struct spwd *getspent(void);
+            Return: pointer if OK, NULL on error
+    void setspent(void);
+    void endspent(void);
+            \end{lstlisting}
+            \vspace*{-3em}
+            \subsection*{Dynamic Memory Allocation}
+            \begin{lstlisting}
+    #include <stdlib.h>
+    void *malloc(size_t size);
+    void *calloc(size_t nobj, size_t size);
+    void *realloc(void *ptr, size_t newsize);
+        Returns: pointer on success, NULL otherwise
+    void free(void *ptr);
+            \end{lstlisting}
+            \lstinline|void *malloc( unsigned nbytes )|
+            \begin{itemize}
+                \setlength{\itemsep}{-0.5em}
+                \item Allocates \lstinline|nbytes| of memory
+                \item Guaranted not to overlap other allocated memory
+                \item Returns point to first byte (or NULL if heap is full)
+                \item Similar to constructor in Java - allocates space
+                \item Allocated space is uninitialized (random garbage)
+            \end{itemize}
+            \lstinline|void free( void *ptr )|
+            \begin{itemize}
+                \setlength{\itemsep}{-0.5em}
+                \item Frees the memory assigned to ptr.
+                \item The space must have been allocated by \lstinline|malloc|
+                \item No garbage collection in C
+                \item Can slowly consume memory if not careful
+            \end{itemize}
+            \vspace*{-4em}
+            \subsection*{Time}
+            \begin{lstlisting}
+#include <time.h>
+time_t time(time_t *calptr);
+       Returns: value of time if OK, -1 on error
+Number of seconds since Epoch: 00:00:00 1970/1/1, UTC
+Example: curtime = time (NULL); /* Get the current time. */
+
+#include <sys/time.h>
+int gettimeofday(struct timeval *restrict tp,
+    void *restrict tzp);
+       Returns: 0 always
+struct timeval {
+    time_t tv_sec; /* sec */
+    long tv_usec; /*microsec*/
+};
+    \end{lstlisting}
+        \end{flushright}
+    \end{minipage}
+\end{multicols}
+\end{document}
