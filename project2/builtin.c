@@ -110,12 +110,32 @@ static char filetypeletter(int mode)
 
 enum {
   LIST_FANCY = 1 << 0,
-	LIST_ALL = 1 << 1,
-	LIST_IMPLIED = 1 << 2
+	DONT_LIST_IMPLIED = 1 << 1,
+	LIST_HIDDEN = 1 << 2
 };
 
-static void lsIndividual(struct dirent *dirEntry, int fancy) {
-	if(fancy == 0) {
+static void printFilePerms(mode_t perms) {
+    printf( (perms & S_IRUSR) ? "r" : "-");
+    printf( (perms & S_IWUSR) ? "w" : "-");
+    printf( (perms & S_IXUSR) ? "x" : "-");
+    printf( (perms & S_IRGRP) ? "r" : "-");
+    printf( (perms & S_IWGRP) ? "w" : "-");
+    printf( (perms & S_IXGRP) ? "x" : "-");
+    printf( (perms & S_IROTH) ? "r" : "-");
+    printf( (perms & S_IWOTH) ? "w" : "-");
+    printf( (perms & S_IXOTH) ? "x" : "-");
+}
+
+static void lsIndividual(struct dirent *dirEntry, int bitfield) {
+	if(strcmp(dirEntry->d_name, ".") == 0 || strcmp(dirEntry->d_name, "..") == 0) {
+		if((bitfield & DONT_LIST_IMPLIED) == DONT_LIST_IMPLIED)
+			return;
+	}
+
+  if(dirEntry->d_name[0] == '.' && ((bitfield & LIST_HIDDEN) == 0))
+		return;
+
+	if((bitfield & LIST_FANCY) == 0) {
 	  printf("%s\n", dirEntry->d_name);
 		return;
 	}
@@ -125,7 +145,9 @@ static void lsIndividual(struct dirent *dirEntry, int fancy) {
 		perror("Unable to stat file");
 		return;
 	}
-  printf("%c %s\n", filetypeletter(fileStat.st_mode), dirEntry->d_name);
+	printf("%c", filetypeletter(fileStat.st_mode));
+	printFilePerms(fileStat.st_mode);
+	printf(" %s\n", dirEntry->d_name);
 }
 
 static void ls(char** args, int argcp) {
@@ -138,19 +160,19 @@ static void ls(char** args, int argcp) {
 		return;
 	}
 
-	int BITFIELD = 0;
+	int bitfield = 0;
 	if(hasFlags(args, argcp, 'l'))
-		BITFIELD |= LIST_FANCY;
+		bitfield |= LIST_FANCY;
+	if(hasFlags(args, argcp, 'A')) {
+		bitfield |= DONT_LIST_IMPLIED;
+		bitfield |= LIST_HIDDEN;
+	}
 	if(hasFlags(args, argcp, 'a'))
-		BITFIELD |= LIST_ALL;
-	if(hasFlags(args, argcp, 'A'))
-		BITFIELD |= LIST_IMPLIED;
-  // int fancy = hasFlags(args, argcp, 'l'), 
-	// 		includeAll = hasFlags(args, argcp, 'a'), 
-	// 		includeImplied = hasFlags(args, argcp, 'A');
+		bitfield |= LIST_HIDDEN;
+	printf("Bitfield: %d\n", bitfield);
 
 	while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL)
-		lsIndividual(dirEntry, fancy);
+		lsIndividual(dirEntry, bitfield);
 
 	closedir(dirPointer);
 }
