@@ -1,0 +1,38 @@
+name: Encrypt and Decrypt
+
+
+on:
+  push:
+    paths:
+      - 'project1/**'
+      - '.github/workflows/project1.yml'
+  pull_request:
+    paths:
+      - 'project1/**'
+      - '.github/workflows/project1.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build C file
+      run: gcc -o project1/decrypt project1/decrypt.c
+
+    - name: Encrypt file
+      run: project1/decrypt -e project1/input.txt
+
+    - name: Decrypt file
+      run: project1/decrypt -d project1/input_enc.txt
+
+    - name: Verify decrypted file
+      run: |
+        if diff -q project1/input.txt project1/input_enc_dec.txt; then
+          echo "Files match, encryption and decryption successful."
+        else
+          echo "Error: Files differ, encryption or decryption failed."
+          exit 1
+        fi
