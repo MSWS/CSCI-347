@@ -26,9 +26,21 @@ ssize_t getinput(char** line, size_t* size);
 
 int main () {
 
- //write your code
- //use getinput and processline as appropriate
+	char *line = NULL;
+	size_t size = 0;
 
+  while(1) {
+	  size_t length = getinput(&line, &size);
+		if(length == -1) {
+		  fprintf(stderr, "Input error, exiting...\n");
+			break;
+		}
+
+		processline(line);
+		free(line);
+		line = NULL;
+		size = 0;
+	}
   return EXIT_SUCCESS;
 }
 
@@ -47,10 +59,20 @@ int main () {
 ssize_t getinput(char** line, size_t* size) {
 
   ssize_t len = 0;
+  printf("%%myshell%% ");
   
-  
-  //write your code
+	len = getline(line, size, stdin);
 
+	if(len == -1) {
+		perror("getline");
+		return len;
+	}
+
+	if(len == 0 || (*line)[len - 1] != '\n')
+		return len;
+
+	(*line)[len - 1] = '\0';
+	len--;
   return len;
 }
 
@@ -71,10 +93,11 @@ void processline (char *line)
   int   status;
   int argCount;
   char** arguments = argparse(line, &argCount);
-  
-  /*check whether arguments are builtin commands
-   *if not builtin, fork to execute the command.
-   */
-    //write your code
+ 
+  if(strlen(line) == 0)
+		return;
+
+	builtIn(arguments, argCount);
+	free(arguments);
 }
 

@@ -14,6 +14,8 @@
 #include <dirent.h>
 #include <stdbool.h>
 #include <pwd.h>
+#include <grp.h>
+#include <time.h>
 
 //Prototypes
 static void exitProgram(char** args, int argcp);
@@ -44,10 +46,8 @@ static bool hasFlags(char** args, int argc, char flag) {
   */
 int builtIn(char** args, int argcp)
 {
-	printf("BuiltIn called with %d args\n", argcp);
 	if(argcp <= 0)
 		return 0;
-	printf("Args[0] = %s\n", args[0]);
 	if(strcmp(args[0], "pwd") == 0) {
 		pwd(args, argcp);
 		return 1;
@@ -72,32 +72,35 @@ int builtIn(char** args, int argcp)
 		env(args, argcp);
 		return 1;
 	}
+	
+	if(strcmp(args[0], "exit") == 0) {
+	  exitProgram(args, argcp);
+	}
 
 	perror("Unexpected end");
 	return 1;
 }
 
-static void exitProgram(char** args, int argcp)
-{
- //write your code
-}
-
 static void pwd(char** args, int argpc)
 {
-  //write your code
+	char buffer[PATH_MAX];
+	if(getcwd(buffer, sizeof(buffer)) == NULL) {
+		perror("Error getting pwd");
+		return;
+	}
 
+	printf("%s\n", buffer);
 }
 
 
 static void cd(char** args, int argcp)
 {
- //write your code
+	if(chdir(args[1]) != 0)
+		perror("chdir");
 }
 
 static char filetypeletter(int mode)
 {
-    char c;
-
     if (S_ISREG(mode))
         return '-';
     if (S_ISDIR(mode))
@@ -127,17 +130,24 @@ static void printFilePerms(mode_t perms) {
     printf( (perms & S_IXOTH) ? "x" : "-");
 }
 
-static void lsIndividual(struct dirent *dirEntry, int bitfield) {
-	if(strcmp(dirEntry->d_name, ".") == 0 || strcmp(dirEntry->d_name, "..") == 0) {
+static int ignoreFile(const char* name, int bitfield) {
+  if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
 		if((bitfield & DONT_LIST_IMPLIED) == DONT_LIST_IMPLIED)
-			return;
+			return 1;
 	}
 
-  if(dirEntry->d_name[0] == '.' && ((bitfield & LIST_HIDDEN) == 0))
+  if(name[0] == '.' && ((bitfield & LIST_HIDDEN) == 0))
+		return 1;
+
+	return 0;
+}
+
+static void lsIndividual(struct dirent *dirEntry, int bitfield) {
+  if(ignoreFile(dirEntry->d_name, bitfield))
 		return;
 
 	if((bitfield & LIST_FANCY) == 0) {
-	  printf("%s\n", dirEntry->d_name);
+	  printf("%s ", dirEntry->d_name);
 		return;
 	}
 
@@ -148,26 +158,34 @@ static void lsIndividual(struct dirent *dirEntry, int bitfield) {
 	}
 	printf("%c", filetypeletter(fileStat.st_mode));
 	printFilePerms(fileStat.st_mode);
-  printf(" %d", fileStat.st_nlink);
+  printf(" %lu ", fileStat.st_nlink);
 
   struct passwd *pwd = getpwuid(fileStat.st_uid);
-	if(pwd == NULL)
-		printf("%-8.8s", pwd->pw_name);
+	if(pwd != NULL)
+		printf("%s", pwd->pw_name);
 	else
-		printf("%8d", fileStat.st_uid);
+		printf("%d", fileStat.st_uid);
+
+	printf(" ");
+
+  struct group *grp = getgrgid(fileStat.st_gid);
+	if(grp != NULL)
+		printf("%s", grp->gr_name);
+	else
+		printf("%d", fileStat.st_gid);
+
+	printf("%8ld ", fileStat.st_size);
+
+	char formattedTimeBuffer[32];
+	struct tm* timeInfo = localtime(&(fileStat.st_mtime));
+  strftime(formattedTimeBuffer, sizeof(formattedTimeBuffer), "%b %d %H:%M", timeInfo);
+	printf("%s", formattedTimeBuffer);
 
 	printf(" %s\n", dirEntry->d_name);
 }
 
 static void ls(char** args, int argcp) {
-	DIR *dirPointer;
 	struct dirent *dirEntry;
-	dirPointer = opendir("."); // open all at present directory
-
-	if(dirPointer == NULL) {
-		perror("Could not open current dir");
-		return;
-	}
 
 	int bitfield = 0;
 	if(hasFlags(args, argcp, 'l'))
@@ -178,16 +196,48 @@ static void ls(char** args, int argcp) {
 	}
 	if(hasFlags(args, argcp, 'a'))
 		bitfield |= LIST_HIDDEN;
-	printf("Bitfield: %d\n", bitfield);
+
+  // Calculate total blocks used in dir
+	int total = 0;
+	struct stat tmpStat;
+
+	DIR *dirPointer = opendir("."); // open all at present directory
+
+	if(dirPointer == NULL) {
+		perror("Could not open current dir");
+		return;
+	}
+	while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL) {
+		if(ignoreFile(dirEntry->d_name, bitfield) != 0)
+			continue;
+
+	  if(stat(dirEntry->d_name, &tmpStat) < 0) {
+	  	perror("Unable to stat file");
+	  	return;
+	  }
+
+		total += tmpStat.st_blocks;
+	}
+	closedir(dirPointer);
+	dirPointer = opendir("."); // open all at present directory
+
+	printf("total %d\n", total / 2);
 
 	while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL)
 		lsIndividual(dirEntry, bitfield);
 
+	if((bitfield & LIST_FANCY) != LIST_FANCY)
+		printf("\n");
 	closedir(dirPointer);
 }
 
-static void cp(char** args, int argcp)
-{}
+static void cp(char** args, int argcp) {
+	
+}
 
 static void env(char** args, int argcp)
 {}
+
+static void exitProgram(char** args, int argcp) {
+  _exit(0);
+}
