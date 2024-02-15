@@ -76,8 +76,6 @@ ssize_t getinput(char** line, size_t* size) {
   len = getline(line, size, stdin);
 
   if (len == -1) {
-    free(line);
-    free(size);
     perror("getline");
     return len;
   }
