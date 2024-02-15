@@ -1,68 +1,66 @@
 #include <stdbool.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*
-* argCount is a helper function that takes in a String and returns the number of "words" in the string assuming that whitespace is the only possible delimeter.
-*/
+ * argCount is a helper function that takes in a String and returns the number
+ * of "words" in the string assuming that whitespace is the only possible
+ * delimeter.
+ */
 static int argCount(char* line) {
-	int count = 0;
-	bool inWord = false;
+  int count = 0;
+  bool inWord = false;
 
-	for(int i = 0; i < strlen(line); i++) {
-		if(line[i] == ' ') {
-		  inWord = false;
-		} else if (!inWord) {
-			count++;
-			inWord = true;
-		}
-	}
-	
-	return count;
+  for (int i = 0; i < strlen(line); i++) {
+    if (line[i] == ' ') {
+      inWord = false;
+    } else if (!inWord) {
+      count++;
+      inWord = true;
+    }
+  }
+
+  return count;
 }
 
-
-
 /*
-*
-* Argparse takes in a String and returns an array of strings from the input.
-* The arguments in the String are broken up by whitespaces in the string.
-* The count of how many arguments there are is saved in the argcp pointer
-*/
-char** argparse(char* line, int* argcp)
-{
-	int argc = argCount(line);
+ *
+ * Argparse takes in a String and returns an array of strings from the input.
+ * The arguments in the String are broken up by whitespaces in the string.
+ * The count of how many arguments there are is saved in the argcp pointer
+ */
+char** argparse(char* line, int* argcp) {
+  int argc = argCount(line);
 
-	char** arguments = (char**) malloc(argc * sizeof(char *));
+  char** arguments = (char**)malloc(argc * sizeof(char*));
 
-	for(int i = 0; i < sizeof(arguments); i++) {
-	    arguments[i] = (char*) malloc(64 * sizeof(char));
-	}
+  for (int i = 0; i < sizeof(arguments); i++) {
+    arguments[i] = (char*)malloc(64 * sizeof(char));
+  }
 
-	if(arguments == NULL) {
-		perror("malloc");
-		return NULL;
-	}
+  if (arguments == NULL) {
+    perror("malloc");
+    return NULL;
+  }
 
   *argcp = argc;
 
-	int currentArgIndex = 0;
-	int currentArgLength = 0;
-	for(int i = 0; i < strlen(line); i++){
-	  if(*(line + i) == ' ') {
-			*(arguments[currentArgIndex]+currentArgLength) = '\0';
-			currentArgLength = 0;
-			currentArgIndex++;
-			continue;
-		}
-		(arguments[currentArgIndex][currentArgLength]) = *(line + i);
-		currentArgLength++;
-	}
-	(arguments[currentArgIndex][currentArgLength]) = '\0';
-	(arguments[currentArgIndex + 1]) = NULL;
+  int currentArgIndex = 0;
+  int currentArgLength = 0;
+  for (int i = 0; i < strlen(line); i++) {
+    if (*(line + i) == ' ') {
+      *(arguments[currentArgIndex] + currentArgLength) = '\0';
+      currentArgLength = 0;
+      currentArgIndex++;
+      continue;
+    }
+    (arguments[currentArgIndex][currentArgLength]) = *(line + i);
+    currentArgLength++;
+  }
+  (arguments[currentArgIndex][currentArgLength]) = '\0';
+  (arguments[currentArgIndex + 1]) = NULL;
 
-	return arguments;
+  return arguments;
 }
-
