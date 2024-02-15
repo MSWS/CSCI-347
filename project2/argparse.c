@@ -34,9 +34,9 @@ static int argCount(char* line) {
 char** argparse(char* line, int* argcp) {
   int argc = argCount(line);
 
-  char** arguments = (char**)malloc(argc * sizeof(char*));
+  char** arguments = (char**)malloc((argc + 1) * sizeof(char*));
 
-  for (int i = 0; i < sizeof(arguments); i++) {
+  for (int i = 0; i < argc; i++) {
     arguments[i] = (char*)malloc(64 * sizeof(char));
   }
 

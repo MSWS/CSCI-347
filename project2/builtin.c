@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include<stdlib.h>
 
 // Prototypes
 static void exitProgram(char** args, int argcp);
@@ -78,4 +79,8 @@ static void cd(char** args, int argcp) {
   if (chdir(args[1]) != 0) perror("chdir");
 }
 
-static void exitProgram(char** args, int argcp) { _exit(0); }
+static void exitProgram(char** args, int argcp) {
+  for (int i = 0; i < argcp + 1; i++) free(args[i]);
+  free(args);
+  _exit(0);
+}
