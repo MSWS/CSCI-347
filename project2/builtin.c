@@ -21,7 +21,6 @@
 static void exitProgram(char** args, int argcp);
 static void cd(char** args, int argpcp);
 static void pwd(char** args, int argcp);
-static void env(char** args, int argcp);
 
 bool hasFlags(char** args, int argc, char flag) {
 	for(int i = 1; i < argc; i++) {
@@ -95,9 +94,6 @@ static void cd(char** args, int argcp)
 	if(chdir(args[1]) != 0)
 		perror("chdir");
 }
-
-static void env(char** args, int argcp)
-{}
 
 static void exitProgram(char** args, int argcp) {
   _exit(0);

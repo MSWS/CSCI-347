@@ -118,8 +118,8 @@ void processline (char *line)
 		if(id != 0)
 			waitpid(id, NULL, 0);
 		else {
-			printf("Executing %s", arguments[0]);
 		  execvp(arguments[0], arguments);
+			printf("Invalid command\n");
 		}
 	}
 	free(arguments);

@@ -18,6 +18,7 @@
 #include <time.h>
 #include <stdbool.h>
 
+#include <sys/ioctl.h>
 #include "builtin_ls.h"
 
 enum {
@@ -71,11 +72,6 @@ void lsIndividual(struct dirent *dirEntry, int bitfield) {
   if(ignoreFile(dirEntry->d_name, bitfield))
 		return;
 
-	if((bitfield & LIST_FANCY) == 0) {
-	  printf("%-8s\n", dirEntry->d_name);
-		return;
-	}
-
 	struct stat fileStat;
 	if(stat(dirEntry->d_name, &fileStat) < 0) {
 		perror("Unable to stat file");
@@ -124,7 +120,7 @@ void ls(char** args, int argcp) {
 		bitfield |= LIST_HIDDEN;
 
   // Calculate total blocks used in dir
-	int total = 0;
+	int total = 0, fileCount = 0;
 	struct stat tmpStat;
 
 	DIR *dirPointer = opendir("."); // open all at present directory
@@ -133,6 +129,7 @@ void ls(char** args, int argcp) {
 		perror("Could not open current dir");
 		return;
 	}
+
 	while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL) {
 		if(ignoreFile(dirEntry->d_name, bitfield) != 0)
 			continue;
@@ -141,13 +138,51 @@ void ls(char** args, int argcp) {
 	  	perror("Unable to stat file");
 	  	return;
 	  }
-
+	
+		fileCount++;
 		total += tmpStat.st_blocks;
 	}
+
 	closedir(dirPointer);
 	dirPointer = opendir("."); // open all at present directory
 
 	printf("total %d\n", total / 2);
+
+	if((bitfield & LIST_FANCY) == 0){
+	  char** fileNames = (char**) malloc(fileCount * sizeof(char*));
+		if(fileNames == NULL) {
+			perror("malloc");
+			return;
+		}
+		int fileIndex = 0, maxNameLength = 0;
+
+	  for(int i = 0; i < fileCount; i++)
+	  	fileNames[i] = (char*) malloc((FILENAME_MAX + 1) * sizeof(char));
+
+	  while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL) {
+			if(ignoreFile(dirEntry->d_name, bitfield) != 0)
+				continue;
+			if(strlen(dirEntry->d_name) > maxNameLength)
+				maxNameLength = strlen(dirEntry->d_name);
+			strcpy(fileNames[fileIndex++], dirEntry->d_name);
+		}
+
+		int columns = 80;
+		struct winsize winSize;
+		if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &winSize) == -1) {
+		  perror("ioctl");
+		} else {
+			columns = winSize.ws_col / (maxNameLength + 2);
+		}
+
+		for(int i = 0; i < fileCount; i++) {
+			printf("%-*s", maxNameLength + 2, fileNames[i]);
+			if((i + 1) % columns == 0)
+				printf("\n");
+			free(fileNames[i]);
+		}
+		free(fileNames);
+	}
 
 	while((dirEntry = ((struct dirent*) readdir(dirPointer))) != NULL)
 		lsIndividual(dirEntry, bitfield);

@@ -20,6 +20,8 @@
 
 #include "builtin_cp.h"
 
+int internal_cp(const char* from, const char* target);
+
 void cp(char** args, int argcp) {
 	if(argcp != 3) {
 	  printf("Usage: cp [source] [destination]\n");
@@ -45,7 +47,7 @@ int internal_cp(const char* from, const char* target) {
 	}
 
   ssize_t bytesRead;
-		while((bytesRead = read(fromFD, buffer, sizeof(buffer))) > 0) {
+	while((bytesRead = read(fromFD, buffer, sizeof(buffer))) > 0) {
 		char *outputPtr = buffer;
 		ssize_t bytesWritten;
 
@@ -70,4 +72,5 @@ int internal_cp(const char* from, const char* target) {
 
 		return -1; // Something went wrong, we still have bytes remaining!
 	}
+	return -1;
 }
