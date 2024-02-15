@@ -13,6 +13,14 @@
 #include "argparse.h"
 #include "builtin.h"
 
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
 
 /* PROTOTYPES */
 
@@ -59,8 +67,12 @@ int main () {
 ssize_t getinput(char** line, size_t* size) {
 
   ssize_t len = 0;
-  printf("%%myshell%% ");
+	char* buffer = getcwd(NULL, 0);
+
+  printf(BLU "%%myshell%% " CYN "(%s) " RESET, buffer);
   
+	free(buffer);
+
 	len = getline(line, size, stdin);
 
 	if(len == -1) {
@@ -89,15 +101,27 @@ void processline (char *line)
  /*check whether line is empty*/
   //write your code
     
-  pid_t cpid;
-  int   status;
+  // pid_t cpid;
+  // int   status;
   int argCount;
   char** arguments = argparse(line, &argCount);
  
   if(strlen(line) == 0)
 		return;
 
-	builtIn(arguments, argCount);
+	if(builtIn(arguments, argCount) == 0) {
+	  pid_t id = fork();
+		if(id < 0) {
+			perror("fork");
+			exit(1);
+		}
+		if(id != 0)
+			waitpid(id, NULL, 0);
+		else {
+			printf("Executing %s", arguments[0]);
+		  execvp(arguments[0], arguments);
+		}
+	}
 	free(arguments);
 }
 

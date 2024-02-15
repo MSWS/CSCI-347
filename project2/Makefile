@@ -1,15 +1,20 @@
-default: myshell.c builtin.o argparse.o
-	gcc -g -Wall -o myshell myshell.c argparse.o builtin.o
+default: myshell.c builtin.o argparse.o builtin_ls.o
+	gcc -g -Wall -o myshell myshell.c *.o
 
 argparse.o: argparse.c argparse.h
 	gcc -g -c -Wall argparse.c
 
-builtin.o: builtin.c builtin.h
-	gcc -g -c -Wall builtin.c
+builtin.o: builtin.c builtin.h builtin_ls.o builtin_cp.o
+	gcc -g -c -Wall -o builtin.o builtin.c 
 
-test: builtin.o
-	gcc -g test.c -o test builtin.o
+builtin_ls.o: builtin_ls.c builtin_ls.h
+	gcc -g -c -Wall -o builtin_ls.o  builtin_ls.c
+
+builtin_cp.o: builtin_cp.c builtin_cp.h
+	gcc -g -c -Wall -o builtin_cp.o builtin_cp.c
 
 clean:
 	rm *.o *.s || true
 	rm test myshell || true
+	rm *.out || true
+	rm *.gch || true

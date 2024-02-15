@@ -1,3 +1,7 @@
+#include <stdbool.h>
+#include "builtin_ls.h"
+#include "builtin_cp.h"
+
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
@@ -8,6 +12,8 @@
 * returns 1 if it finds a builtin command to run, returns 0 otherwise
 */
 int builtIn(char** args, int argcp);
+
+bool hasFlags(char** args, int argc, char flag);
 
 #endif
 

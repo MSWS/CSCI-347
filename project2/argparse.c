@@ -43,7 +43,6 @@ char** argparse(char* line, int* argcp)
 {
 	int argc = argCount(line);
 
-	// char** arguments = (char**) malloc(64 * argc * sizeof(char *));
 	char** arguments = (char**) malloc(argc * sizeof(char *));
 
 	for(int i = 0; i < sizeof(arguments); i++) {
@@ -70,6 +69,7 @@ char** argparse(char* line, int* argcp)
 		currentArgLength++;
 	}
 	(arguments[currentArgIndex][currentArgLength]) = '\0';
+	(arguments[currentArgIndex + 1]) = NULL;
 
 	return arguments;
 }
