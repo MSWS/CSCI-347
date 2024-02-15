@@ -47,10 +47,10 @@ char** argparse(char* line, int* argcp) {
 
   *argcp = argc;
 
-  int currentArgIndex = 0;
-  int currentArgLength = 0;
+  int currentArgIndex = 0;   // Keep track what arg we're modifying
+  int currentArgLength = 0;  // Keep track the length of the arg we're modifying
   for (int i = 0; i < strlen(line); i++) {
-    if (*(line + i) == ' ') {
+    if (*(line + i) == ' ') {  // End of current arg
       *(arguments[currentArgIndex] + currentArgLength) = '\0';
       currentArgLength = 0;
       currentArgIndex++;
@@ -59,8 +59,8 @@ char** argparse(char* line, int* argcp) {
     (arguments[currentArgIndex][currentArgLength]) = *(line + i);
     currentArgLength++;
   }
-  (arguments[currentArgIndex][currentArgLength]) = '\0';
-  (arguments[currentArgIndex + 1]) = NULL;
+  (arguments[currentArgIndex][currentArgLength]) = '\0'; // Null terminate final arg
+  (arguments[currentArgIndex + 1]) = NULL; // Add NULL terminator for execve
 
   return arguments;
 }

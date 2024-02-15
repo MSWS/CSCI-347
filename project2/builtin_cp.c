@@ -1,23 +1,10 @@
 #include "builtin_cp.h"
 
-#include <assert.h>
-#include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <grp.h>
-#include <pwd.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
-
-#include "builtin.h"
 
 int internal_cp(const char* from, const char* target);
 
