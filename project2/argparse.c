@@ -1,21 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include "argparse.h"
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <errno.h>
 #include <stdbool.h>
-
-#define FALSE (0)
-#define TRUE  (1)
+#include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <stdio.h>
 
 /*
 * argCount is a helper function that takes in a String and returns the number of "words" in the string assuming that whitespace is the only possible delimeter.
 */
-static int argCount(char*line) {
+static int argCount(char* line) {
 	int count = 0;
 	bool inWord = false;
 
