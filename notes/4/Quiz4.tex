@@ -1,0 +1,216 @@
+\documentclass[10pt]{article}
+
+\usepackage[tmargin=0.1in, bmargin=0.25in, lmargin = 0.1in, rmargin = 0.25in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{pstricks}
+\usepackage{makecell}
+\usepackage{caption}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+    \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+    \hskip -\arraycolsep
+    \let\@ifnextchar\new@ifnextchar
+    \array{#1}}
+\makeatother
+
+\begin{document}
+\scriptsize
+\begin{multicols}{2}
+    \begin{minipage}{\columnwidth}
+        \subsection*{Process Lifecycle}
+        \begin{itemize}
+            \setlength{\itemsep}{-0em}
+            \item int main(void) \{ /* .. */ \}
+            \item int main(int argc, char* argv[]) \{ /* ... */ \}
+            \item int main(int argc, char* argv[], char* envp[]) \{ /* ... */ \}
+        \end{itemize}
+        \begin{itemize}
+            \setlength{\itemsep}{-0em}
+            \item When exec func is called, kernel needs to start the given program
+            \item Special startup routine is called by kernel which sets up main
+            \item C startup routine sets up environment and args into proper registers
+            \item main returns an int which is passed to exit(3)
+            \item When a program is started, the call could be exit(main(argc, argv))
+        \end{itemize}
+        \subsubsection*{Termination}
+        Normal termination:
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item return from mainexit(3), \_exit(2), or \_Exit(2)
+            \item return of last thread from start routine
+            \item calling pthread\_exit(3) from last thread
+        \end{itemize}
+        Abnormal termination:
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item calling abort(3)
+            \item termination by signal
+            \item response of last thread to a cancellation request
+        \end{itemize}
+        \subsection*{Environment}
+        Env vars are stored in global NULL terminated array of pointers:
+        \lstinline|extern char **environ;| A similar array can be passed
+        to main: \lstinline|int main(int argc, char **argv, char **envp)|
+        \begin{lstlisting}
+#include <stdlib.h>
+char *getenv(const char *name);
+    Returns: value if found, NULL if not found
+
+int putenv(char *string);
+int setenv(const char *name, const char *value,
+    int overwrite);
+int unsetenv(const char *name);
+    Returns: 0 if OK, -1 on error
+        \end{lstlisting}
+        \subsubsection*{wait(2) and waitpid(2)}
+        \begin{lstlisting}
+#include <sys/wait.h>
+pid_t wait(int *status);
+pid_t waitpid(pid_t pid, int *status, int options);
+
+#include <sys/resource.h>
+pid_t wait3(int *status, int options, struct rusage *rusage);
+pid_t wait4(pid_t pid, int *status, int options,
+    struct rusage *rusage);
+    Returns: child PID if OK, -1 on error
+        \end{lstlisting}
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item wait() suspends execution of the process until status info is available for a terminated child
+            \item waitpid() and wait(4) allow waiting for a specific process
+            \item wait3() and wait4() allow inspection of resource usage
+        \end{itemize}
+        \subsubsection*{exec(3)}
+        The exec() family of functions replaces the current process image with a new process image.
+        They are all front-ends to the execve(2) system call.
+        \begin{lstlisting}
+#include <unistd.h>
+int execl(const char *path, const char *arg, ...);
+int execlp(const char *file, const char *arg, ...);
+int execlpe(const char *file, const char *arg, ...,
+    char *const envp[]);
+int execle(const char *path, const char *arg, ...,
+    char *const envp[]);
+int execv(const char *path, char *const argv[]);
+int execve(const char *path, char *const argv[],
+    char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[],
+    char *const envp[]);
+    Returns: -1 on error, no return on success
+        \end{lstlisting}
+        \hspace*{-1em}
+        \begin{tabular}{|c|c|c|c||c|c|c|c|}
+            \hline
+            Function & \textit{pathname} & \textit{filename} & \textit{fd} & Arg list  & \textit{argv[]} & \textbf{environ} & \textit{envp[]} \\
+            \hline \hline
+            execl    & $\bullet$         &                   &             & $\bullet$ &                 & $\bullet$        &                 \\
+            execlp   &                   & $\bullet$         &             & $\bullet$ &                 & $\bullet$        &                 \\
+            execle   & $\bullet$         &                   &             & $\bullet$ &                 &                  & $\bullet$       \\
+            execv    & $\bullet$         &                   &             &           & $\bullet$       & $\bullet$        &                 \\
+            execvp   &                   & $\bullet$         &             &           & $\bullet$       & $\bullet$        &                 \\
+            execve   & $\bullet$         &                   &             &           & $\bullet$       &                  & $\bullet$       \\
+            fexecve  &                   &                   & $\bullet$   &           & $\bullet$       &                  & $\bullet$       \\
+            \hline
+        \end{tabular}
+    \end{minipage}
+    \begin{minipage}{\columnwidth}
+        \subsection*{Exits}
+        \subsubsection*{exit(3)}
+        \begin{lstlisting}
+#include <stdlib.h>
+void exit(int status);
+        \end{lstlisting}
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item terminates a process, before termination:
+                  \begin{itemize}
+                      \setlength{\itemsep}{-0em}
+                      \item Calls the functions registered with atexit(3) in reverse order
+                      \item Flush all open output streams, close al open streams
+                      \item Unlink all files created with tmpfile(3) function
+                  \end{itemize}
+            \item calls \_exit(2)
+        \end{itemize}
+        \subsubsection*{\_exit(2)}
+        \begin{lstlisting}
+#include <unistd.h>
+void _exit(int status);
+        \end{lstlisting}
+        \begin{itemize}
+            \setlength{\itemsep}{-0em}
+            \item terminates a process immediately
+            \item does not call functions registered with atexit(3)
+        \end{itemize}
+        \subsection*{Process Control}
+        Process ID is a nonnegative int. IDs are guaranteed to be unique
+        and identify a particlar exisintg process.
+        \begin{lstlisting}
+    #include <unistd.h>
+    pid_t getpid(void);  // return PID
+    pid_t getppid(void); // return parent PID
+    uid_t getuid(void);  // return real user ID
+    uid_t geteuid(void); // return effective user ID
+    gid_t getgid(void);  // return real group ID
+    gid_t getegid(void); // return effective group ID
+        \end{lstlisting}
+        \begin{tabular}{ll}
+            PID     & Process                            \\
+            0       & swapper (scheduler)                \\
+            1       & init (/sbin/init)                  \\
+            2       & pagedaemon (virtual memory paging) \\
+            3,4,... & Other processes                    \\
+        \end{tabular}
+        \subsubsection*{fork(2)}
+        \begin{lstlisting}
+    #include <unistd.h>
+    pid_t fork(void);
+        Returns: 0 in child, PID of child in parent, -1 on error
+        \end{lstlisting}
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item fork(2) is the ONLY way to create a process in Unix kernel by user
+            \item Child process has unique PID
+            \item copy-on-write (COW):
+                  \begin{itemize}
+                      \item Memory regions are read-only and shared by parent and child
+                      \item when write occurs, kernel makes a copy of that memory for that process
+                  \end{itemize}
+            \item No guarantee of order of execution
+        \end{itemize}
+        \begin{minipage}{0.4\columnwidth}
+            Possibe reasons for fail:
+            \begin{itemize}
+                \item too many processes
+                \item total \# exceeds user limit
+            \end{itemize}
+        \end{minipage}
+        \begin{minipage}{0.5\columnwidth}
+            Two common uses:
+            \begin{itemize}
+                \item Duplicate to execute different code sections (networking)
+                \item Execute different programs (shells)
+            \end{itemize}
+        \end{minipage}
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item Parent and child share same file descriptors
+            \item As if dup() had been called on all file descriptors
+            \item Parent and child share same file offset
+            \item Intermixed output from parent and child
+        \end{itemize}
+        \begin{itemize}
+            \item All processes not explicitly isntantiated by kernel were created by fork(2)
+            \item fork(2) creates copy of current process including file descriptors and output buffers
+            \item To replace current process with new process image, use exec(3) family of function
+            \item After creating new process via fork(2), the parent process can wait(2) for child to process to reap its exist status and resource utilization
+            \item Failure to wait(2) will create a zombie process until parent is terminated
+        \end{itemize}
+    \end{minipage}
+\end{multicols}
+\end{document}
