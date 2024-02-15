@@ -124,8 +124,6 @@ void ls(char **args, int argcp) {
   closedir(dirPointer);
   dirPointer = opendir(".");  // open all at present directory
 
-  printf("total %d\n", total / 2);
-
   if ((bitfield & LIST_FANCY) == 0) {
     char **fileNames = (char **)malloc(fileCount * sizeof(char *));
     if (fileNames == NULL) {
@@ -134,8 +132,16 @@ void ls(char **args, int argcp) {
     }
     int fileIndex = 0, maxNameLength = 0;
 
-    for (int i = 0; i < fileCount; i++)
+    for (int i = 0; i < fileCount; i++) {
       fileNames[i] = (char *)malloc((FILENAME_MAX + 1) * sizeof(char));
+      if (fileNames[i] == NULL) {
+        perror("malloc");
+        closedir(dirPointer);
+        for (int j = 0; j < i; j++) free(fileNames[j]);
+        free(fileNames);
+        return;
+      }
+    }
 
     while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL) {
       if (ignoreFile(dirEntry->d_name, bitfield) != 0) continue;
@@ -160,6 +166,7 @@ void ls(char **args, int argcp) {
     free(fileNames);
   }
 
+  printf("total %d\n", total / 2);
   while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL)
     lsIndividual(dirEntry, bitfield);
 

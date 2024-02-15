@@ -23,6 +23,12 @@ void env(char** args, int argcp) {
 
   int keyLength = equalsChar - args[1];
   char* envKey = (char*) malloc((keyLength + 1) * sizeof(char));
+
+  if(envKey == NULL) {
+    perror("malloc");
+    return;
+  }
+
   for(int i = 0; i < keyLength; i++)
     envKey[i] = args[1][i];
   envKey[keyLength] = '\0';
@@ -32,6 +38,13 @@ void env(char** args, int argcp) {
     valueLength += strlen(args[i]) + 1;
 
   char* envValue = (char*) malloc((valueLength + 1) * sizeof(char));
+
+  if(envValue == NULL) {
+    free(envKey);
+    perror("malloc");
+    return;
+  }
+
   strcpy(envValue, equalsChar + 1);
 
   for(int i = 2; i < argcp; i++) { // Support for spaces in env vars
