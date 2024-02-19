@@ -6,29 +6,55 @@
 
 void env(char** args, int argcp) {
   if (argcp == 1) {
-    printf("Missing param\n");
+    printf("Usage: env [key](=VALUE)\n");
     return;
   }
 
   char* equalsChar = strchr(args[1], '=');
   if (equalsChar == NULL) {
-    printf("%s=%s\n", args[1], getenv(args[1]));
+    char* value = getenv(args[1]);
+    if (value == NULL) {
+      printf("%s is not set\n", args[1]);
+      return;
+    }
+    printf("%s=%s\n", args[1], value);
     return;
   }
 
-  int combinedStringLength = equalsChar - args[1];
-  for (int i = 2; i < argcp; i++) {
-    combinedStringLength += strlen(args[i]) + 1;
+  int keyLength = equalsChar - args[1];
+  char* envKey = (char*) malloc((keyLength + 1) * sizeof(char));
+
+  if(envKey == NULL) {
+    perror("malloc");
+    return;
   }
 
-  char* combinedValue = (char*)calloc(combinedStringLength + 1, sizeof(char));
-  for (int i = 1; i < argcp; i++) {
-    strcat(combinedValue, args[i]);
-    strcat(combinedValue, " ");
+  for(int i = 0; i < keyLength; i++)
+    envKey[i] = args[1][i];
+  envKey[keyLength] = '\0';
+
+  int valueLength = strlen(args[1]) - keyLength;
+  for(int i = 2; i < argcp; i++)
+    valueLength += strlen(args[i]) + 1;
+
+  char* envValue = (char*) malloc((valueLength + 1) * sizeof(char));
+
+  if(envValue == NULL) {
+    free(envKey);
+    perror("malloc");
+    return;
   }
 
-  printf("%s\n", combinedValue);
-  putenv(combinedValue);
+  strcpy(envValue, equalsChar + 1);
 
-  free(combinedValue);
+  for(int i = 2; i < argcp; i++) { // Support for spaces in env vars
+    strcat(envValue, " ");
+    strcat(envValue, args[i]);
+  }
+
+  setenv(envKey, envValue, 1);
+
+  printf("%s=%s\n", envKey, envValue);
+  free(envValue);
+  free(envKey);
 }

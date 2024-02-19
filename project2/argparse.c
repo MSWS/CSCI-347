@@ -34,15 +34,19 @@ static int argCount(char* line) {
 char** argparse(char* line, int* argcp) {
   int argc = argCount(line);
 
-  char** arguments = (char**)malloc(argc * sizeof(char*));
-
-  for (int i = 0; i < sizeof(arguments); i++) {
-    arguments[i] = (char*)malloc(64 * sizeof(char));
-  }
-
+  char** arguments = (char**)malloc((argc + 1) * sizeof(char*));
   if (arguments == NULL) {
     perror("malloc");
     return NULL;
+  }
+
+  for (int i = 0; i < argc; i++) {
+    arguments[i] = (char*)malloc(64 * sizeof(char));
+    if (arguments[i] == NULL) {
+      perror("malloc");
+      for (int j = 0; j < i; j++) free(arguments[j]);
+      return NULL;
+    }
   }
 
   *argcp = argc;
@@ -61,8 +65,9 @@ char** argparse(char* line, int* argcp) {
     (arguments[currentArgIndex][currentArgLength]) = *(line + i);
     currentArgLength++;
   }
-  (arguments[currentArgIndex][currentArgLength]) = '\0'; // Null terminate final arg
-  (arguments[currentArgIndex + 1]) = NULL; // Add NULL terminator for execve
+  (arguments[currentArgIndex][currentArgLength]) =
+      '\0';                                 // Null terminate final arg
+  (arguments[currentArgIndex + 1]) = NULL;  // Add NULL terminator for execve
 
   return arguments;
 }

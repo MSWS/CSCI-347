@@ -16,6 +16,8 @@
 
 enum { LIST_FANCY = 1 << 0, DONT_LIST_IMPLIED = 1 << 1, LIST_HIDDEN = 1 << 2 };
 
+// Gets the first char to display for a given
+// file's flags
 char filetypeletter(int mode) {
   if (S_ISREG(mode)) return '-';
   if (S_ISDIR(mode)) return 'd';
@@ -28,15 +30,15 @@ char filetypeletter(int mode) {
 // true if the bitmask indicates the file
 // should be ignored based off the bitmask
 bool ignoreFile(const char *name, int bitfield) {
-  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
     if ((bitfield & DONT_LIST_IMPLIED) == DONT_LIST_IMPLIED) return true;
-  }
 
   if (name[0] == '.' && ((bitfield & LIST_HIDDEN) == 0)) return true;
-
   return false;
 }
 
+// Prints out the 9 chars that represent a file's
+// permission flags [usr][group][others]
 void printFilePerms(mode_t perms) {
   printf((perms & S_IRUSR) ? "r" : "-");
   printf((perms & S_IWUSR) ? "w" : "-");
@@ -49,6 +51,7 @@ void printFilePerms(mode_t perms) {
   printf((perms & S_IXOTH) ? "x" : "-");
 }
 
+// Fancy formatting for -l flag
 void lsIndividual(struct dirent *dirEntry, int bitfield) {
   if (ignoreFile(dirEntry->d_name, bitfield)) return;
 
@@ -109,12 +112,15 @@ void ls(char **args, int argcp) {
     return;
   }
 
+  // Collect metadata on both the file count
+  // and total file blocks used
   while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL) {
     if (ignoreFile(dirEntry->d_name, bitfield) != 0) continue;
 
     if (stat(dirEntry->d_name, &tmpStat) < 0) {
       perror("Unable to stat file");
-      return;
+      continue;
+      ;
     }
 
     fileCount++;
@@ -124,9 +130,11 @@ void ls(char **args, int argcp) {
   closedir(dirPointer);
   dirPointer = opendir(".");  // open all at present directory
 
-  printf("total %d\n", total / 2);
-
   if ((bitfield & LIST_FANCY) == 0) {
+    // Simple listing is printed out in cols
+    // 1. Get the max file name length
+    // 2. Get the column width
+    // 3. Format accordingly
     char **fileNames = (char **)malloc(fileCount * sizeof(char *));
     if (fileNames == NULL) {
       perror("malloc");
@@ -134,8 +142,16 @@ void ls(char **args, int argcp) {
     }
     int fileIndex = 0, maxNameLength = 0;
 
-    for (int i = 0; i < fileCount; i++)
+    for (int i = 0; i < fileCount; i++) {
       fileNames[i] = (char *)malloc((FILENAME_MAX + 1) * sizeof(char));
+      if (fileNames[i] == NULL) {
+        perror("malloc");
+        closedir(dirPointer);
+        for (int j = 0; j < i; j++) free(fileNames[j]);
+        free(fileNames);
+        return;
+      }
+    }
 
     while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL) {
       if (ignoreFile(dirEntry->d_name, bitfield) != 0) continue;
@@ -144,25 +160,25 @@ void ls(char **args, int argcp) {
       strcpy(fileNames[fileIndex++], dirEntry->d_name);
     }
 
-    int columns = 80;
+    int columns = 80;  // Default window width
     struct winsize winSize;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winSize) == -1) {
-      perror("ioctl");
+      perror("ioctl");  // Uh oh, just stick to default then
     } else {
-      columns = winSize.ws_col / (maxNameLength + 2);
+      columns = winSize.ws_col / (maxNameLength + 2);  // + 2 for spacing
     }
 
     for (int i = 0; i < fileCount; i++) {
       printf("%-*s", maxNameLength + 2, fileNames[i]);
-      if ((i + 1) % columns == 0) printf("\n");
+      if ((i + 1) % columns == 0 || i == fileCount - 1) printf("\n");
       free(fileNames[i]);
     }
     free(fileNames);
+  } else {
+    printf("total %d\n", total / 2);
+    while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL)
+      lsIndividual(dirEntry, bitfield);
   }
 
-  while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL)
-    lsIndividual(dirEntry, bitfield);
-
-  if ((bitfield & LIST_FANCY) != LIST_FANCY) printf("\n");
   closedir(dirPointer);
 }

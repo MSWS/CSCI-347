@@ -41,11 +41,12 @@ int main() {
     size_t length = getinput(&line, &size);
     if (length == -1) {
       fprintf(stderr, "Input error, exiting...\n");
+      free(line);
       break;
     }
 
     processline(line);
-    free(line);
+    if (line > 0)
     line = NULL;
     size = 0;
   }
@@ -95,16 +96,13 @@ ssize_t getinput(char** line, size_t* size) {
  * to run a built in command
  */
 void processline(char* line) {
-  /*check whether line is empty*/
-  // write your code
-
+  if (strlen(line) == 0) return;
   // pid_t cpid;
   // int   status;
   int argCount;
   char** arguments = argparse(line, &argCount);
-
-  if (strlen(line) == 0) return;
-
+  free(line); // argparse made a copy of line for handling, so we should free
+              // early
   if (builtIn(arguments, argCount) == 0) {
     pid_t id = fork();
     if (id < 0) {
@@ -119,5 +117,9 @@ void processline(char* line) {
 			exit(1);
     }
   }
+
+  for (int i = 0; i < argCount + 1; i++)  // + 1 due to NULL terminator at end
+    free(arguments[i]);
+
   free(arguments);
 }
