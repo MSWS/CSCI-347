@@ -51,6 +51,8 @@ char** argparse(char* line, int* argcp) {
   int currentArgLength = 0;  // Keep track the length of the arg we're modifying
   for (int i = 0; i < strlen(line); i++) {
     if (*(line + i) == ' ') {  // End of current arg
+			if(currentArgLength == 0)
+				continue;
       *(arguments[currentArgIndex] + currentArgLength) = '\0';
       currentArgLength = 0;
       currentArgIndex++;

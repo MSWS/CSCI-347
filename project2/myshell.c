@@ -116,6 +116,7 @@ void processline(char* line) {
     else {
       execvp(arguments[0], arguments);
       printf("Invalid command\n");
+			exit(1);
     }
   }
   free(arguments);
