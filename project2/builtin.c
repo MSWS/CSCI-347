@@ -80,7 +80,8 @@ static void cd(char** args, int argcp) {
 }
 
 static void exitProgram(char** args, int argcp) {
+	int exitCode = argcp == 1 ? 0 : atoi(args[1]);
   for (int i = 0; i < argcp + 1; i++) free(args[i]);
   free(args);
-  _exit(0);
+  exit(exitCode);
 }
