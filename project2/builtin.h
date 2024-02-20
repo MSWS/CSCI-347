@@ -1,9 +1,5 @@
 #include <stdbool.h>
 
-#include "builtin_cp.h"
-#include "builtin_env.h"
-#include "builtin_ls.h"
-
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
