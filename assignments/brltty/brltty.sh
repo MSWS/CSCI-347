@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Tan Nguyen and Isaac Boaz
+
 echo -n "Number of braile drivers: " && grep -c "^#braille-driver" $1
 
 echo "List of braile devices:"
