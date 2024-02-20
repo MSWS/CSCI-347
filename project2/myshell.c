@@ -114,7 +114,11 @@ void processline(char* line) {
     else {
       execvp(arguments[0], arguments);
       printf("Invalid command\n");
-			exit(1);
+      for (int i = 0; i < argCount + 1; i++)  // + 1 due to NULL terminator at end
+        free(arguments[i]);
+
+      free(arguments);
+	    exit(1);
     }
   }
 
