@@ -2,6 +2,6 @@
 #include <stdlib.h>
 
 int main(char** argv, int argcp) {
-	system("echo hi");
+	system("echo $USER && grep include activity.c");
 	return 0;
 }
