@@ -54,8 +54,8 @@ char** argparse(char* line, int* argcp) {
   int currentArgIndex = 0;   // Keep track what arg we're modifying
   int currentArgLength = 0;  // Keep track the length of the arg we're modifying
   for (int i = 0; i < strlen(line); i++) {
-    if (*(line + i) == ' ') {  // End of current arg
-			if(currentArgLength == 0)
+    if (*(line + i) == ' ') {   // End of current arg
+			if(currentArgLength == 0) // The arg we have is just all spaces
 				continue;
       *(arguments[currentArgIndex] + currentArgLength) = '\0';
       currentArgLength = 0;
