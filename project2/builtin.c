@@ -166,42 +166,41 @@ static void printFilePerms(mode_t perms) {
 static void lsIndividual(struct dirent *dirEntry, int bitfield) {
   if (ignoreFile(dirEntry->d_name, bitfield)) return;
 
-  struct stat* fileStat;
-	fileStat = malloc(sizeof(struct stat));
+	struct stat fileStat;
 
-  if (stat(dirEntry->d_name, fileStat) < 0) {
+  if (stat(dirEntry->d_name, &fileStat) < 0) {
     perror("Unable to stat file");
     return;
   }
 
-  printf("%c", filetypeletter(fileStat->st_mode));
-  printFilePerms(fileStat->st_mode);
-  printf(" %lu ", fileStat->st_nlink);
+  printf("%c", filetypeletter(fileStat.st_mode));
+  printFilePerms(fileStat.st_mode);
+  printf(" %lu ", fileStat.st_nlink);
 
-  struct passwd *pwd = getpwuid(fileStat->st_uid);
-  if (pwd != NULL)
+	struct passwd *pwd = getpwuid(fileStat.st_uid);
+  if (pwd != NULL) {
     printf("%s", pwd->pw_name);
+	}
   else
-    printf("%d", fileStat->st_uid);
+    printf("%d", fileStat.st_uid);
 
   printf(" ");
 
-  struct group *grp = getgrgid(fileStat->st_gid);
+  struct group *grp = getgrgid(fileStat.st_gid);
   if (grp != NULL)
     printf("%s", grp->gr_name);
   else
-    printf("%d", fileStat->st_gid);
+    printf("%d", fileStat.st_gid);
 
-  printf("%8ld ", fileStat->st_size);
+  printf("%8ld ", fileStat.st_size);
 
   char formattedTimeBuffer[MAX_DATETIME_LENGTH];
-  struct tm *timeInfo = localtime(&(fileStat->st_mtime));
+  struct tm *timeInfo = localtime(&(fileStat.st_mtime));
   strftime(formattedTimeBuffer, sizeof(formattedTimeBuffer), "%b %d %H:%M",
            timeInfo);
   printf("%s", formattedTimeBuffer);
 
   printf(" %s\n", dirEntry->d_name);
-	free(fileStat);
 }
 
 static void ls(char **args, int argcp) {
