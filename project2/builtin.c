@@ -177,6 +177,9 @@ static void lsIndividual(struct dirent *dirEntry, int bitfield) {
   printFilePerms(fileStat.st_mode);
   printf(" %lu ", fileStat.st_nlink);
 
+	// Apparently this causes a memory leak on this specific 
+	// distribution / version, don't think there's an easy
+	// way around it.
 	struct passwd *pwd = getpwuid(fileStat.st_uid);
   if (pwd != NULL) {
     printf("%s", pwd->pw_name);
