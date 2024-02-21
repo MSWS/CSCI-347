@@ -7,9 +7,6 @@ argparse.o: argparse.c argparse.h
 builtin.o: builtin.c builtin.h
 	gcc -g -c -Wall -o builtin.o builtin.c 
 
-
 clean:
-	rm *.o *.s || true
-	rm test myshell || true
-	rm *.out || true
-	rm *.gch || true
+	rm argparse.o builtin.o
+	rm myshell

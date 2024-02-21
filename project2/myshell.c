@@ -1,5 +1,6 @@
 /* CS 347 -- Mini Shell!
  * Original author Phil Nelson 2000
+ * Further developed by Isaac Boaz
  */
 #include <assert.h>
 #include <ctype.h>
@@ -101,8 +102,8 @@ void processline(char* line) {
   // int   status;
   int argCount;
   char** arguments = argparse(line, &argCount);
-  free(line); // argparse made a copy of line for handling, so we should free
-              // early
+  free(line); // argparse made a copy of line for handling, so 
+              // we should free early
   if (builtIn(arguments, argCount) == 0) {
     pid_t id = fork();
     if (id < 0) {
@@ -113,6 +114,7 @@ void processline(char* line) {
       waitpid(id, NULL, 0);
     else {
       execvp(arguments[0], arguments);
+			// execvp failed
       printf("Invalid command\n");
       for (int i = 0; i < argCount + 1; i++)  // + 1 due to NULL terminator at end
         free(arguments[i]);
