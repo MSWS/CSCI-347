@@ -14,6 +14,9 @@
 #include <time.h>
 #include <fcntl.h>
 
+#define DEFAULT_TERMINAL_WIDTH 80
+#define MAX_DATETIME_LENGTH 32
+
 // Prototypes
 static void exitProgram(char** args, int argcp);
 static void cd(char** args, int argpcp);
@@ -23,6 +26,10 @@ static void cp(char** args, int argcp);
 static void env(char** args, int argcp);
 static int internal_cp(const char* from, const char* to);
 
+/*
+ * Utility function to check if a given string array contains
+ * a specified flag (string preceeded by -)
+ */
 bool hasFlags(char** args, int argc, char flag) {
   for (int i = 1; i < argc; i++) {
     if (*args[i] != '-') continue;  // Not a flags argument
@@ -134,8 +141,8 @@ static char filetypeletter(int mode) {
 // true if the bitmask indicates the file
 // should be ignored based off the bitmask
 static bool ignoreFile(const char *name, int bitfield) {
-  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
-    if ((bitfield & DONT_LIST_IMPLIED) == DONT_LIST_IMPLIED) return true;
+  if ((strcmp(name, ".") == 0 || strcmp(name, "..") == 0) && // File is implied . / ..
+    ((bitfield & DONT_LIST_IMPLIED) == DONT_LIST_IMPLIED)) return true;
 
   if (name[0] == '.' && ((bitfield & LIST_HIDDEN) == 0)) return true;
   return false;
@@ -159,7 +166,8 @@ static void printFilePerms(mode_t perms) {
 static void lsIndividual(struct dirent *dirEntry, int bitfield) {
   if (ignoreFile(dirEntry->d_name, bitfield)) return;
 
-  struct stat fileStat;
+	struct stat fileStat;
+
   if (stat(dirEntry->d_name, &fileStat) < 0) {
     perror("Unable to stat file");
     return;
@@ -169,9 +177,13 @@ static void lsIndividual(struct dirent *dirEntry, int bitfield) {
   printFilePerms(fileStat.st_mode);
   printf(" %lu ", fileStat.st_nlink);
 
-  struct passwd *pwd = getpwuid(fileStat.st_uid);
-  if (pwd != NULL)
+	// Apparently this causes a memory leak on this specific 
+	// distribution / version, don't think there's an easy
+	// way around it.
+	struct passwd *pwd = getpwuid(fileStat.st_uid);
+  if (pwd != NULL) {
     printf("%s", pwd->pw_name);
+	}
   else
     printf("%d", fileStat.st_uid);
 
@@ -185,7 +197,7 @@ static void lsIndividual(struct dirent *dirEntry, int bitfield) {
 
   printf("%8ld ", fileStat.st_size);
 
-  char formattedTimeBuffer[32];
+  char formattedTimeBuffer[MAX_DATETIME_LENGTH];
   struct tm *timeInfo = localtime(&(fileStat.st_mtime));
   strftime(formattedTimeBuffer, sizeof(formattedTimeBuffer), "%b %d %H:%M",
            timeInfo);
@@ -224,7 +236,6 @@ static void ls(char **args, int argcp) {
     if (stat(dirEntry->d_name, &tmpStat) < 0) {
       perror("Unable to stat file");
       continue;
-      ;
     }
 
     fileCount++;
@@ -244,27 +255,29 @@ static void ls(char **args, int argcp) {
       perror("malloc");
       return;
     }
-    int fileIndex = 0, maxNameLength = 0;
+    int fileIndex = 0,     // Index for populating fileNames
+				maxNameLength = 0; // Keep track of longest name for column formatting
 
     for (int i = 0; i < fileCount; i++) {
       fileNames[i] = (char *)malloc((FILENAME_MAX + 1) * sizeof(char));
       if (fileNames[i] == NULL) {
         perror("malloc");
         closedir(dirPointer);
-        for (int j = 0; j < i; j++) free(fileNames[j]);
+        for (int j = 0; j < i; j++) free(fileNames[j]); // Don't free j itself
+																												// cause we failed to malloc j
         free(fileNames);
         return;
       }
     }
 
     while ((dirEntry = ((struct dirent *)readdir(dirPointer))) != NULL) {
-      if (ignoreFile(dirEntry->d_name, bitfield) != 0) continue;
+      if (ignoreFile(dirEntry->d_name, bitfield)) continue;
       if (strlen(dirEntry->d_name) > maxNameLength)
         maxNameLength = strlen(dirEntry->d_name);
       strcpy(fileNames[fileIndex++], dirEntry->d_name);
     }
 
-    int columns = 80;  // Default window width
+    int columns = DEFAULT_TERMINAL_WIDTH;  // Default window width
     struct winsize winSize;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &winSize) == -1) {
       perror("ioctl");  // Uh oh, just stick to default then
@@ -354,7 +367,7 @@ static void env(char** args, int argcp) {
   }
 
   char* equalsChar = strchr(args[1], '=');
-  if (equalsChar == NULL) {
+  if (equalsChar == NULL) { // User did not provide a value
     char* value = getenv(args[1]);
     if (value == NULL) {
       printf("%s is not set\n", args[1]);
@@ -365,20 +378,22 @@ static void env(char** args, int argcp) {
   }
 
   int keyLength = equalsChar - args[1];
-  char* envKey = (char*) malloc((keyLength + 1) * sizeof(char));
+  char* envKey = (char*) malloc((keyLength + 1) * sizeof(char)); // Since we know the key length
+																																 // we can malloc exact size
 
   if(envKey == NULL) {
     perror("malloc");
     return;
   }
 
-  for(int i = 0; i < keyLength; i++)
+  for(int i = 0; i < keyLength; i++) // Copy the beginning part into envKey
+																		 // (part before =)
     envKey[i] = args[1][i];
   envKey[keyLength] = '\0';
 
   int valueLength = strlen(args[1]) - keyLength;
   for(int i = 2; i < argcp; i++)
-    valueLength += strlen(args[i]) + 1;
+    valueLength += strlen(args[i]) + 1; // + 1 for whitespace separation
 
   char* envValue = (char*) malloc((valueLength + 1) * sizeof(char));
 
@@ -388,14 +403,17 @@ static void env(char** args, int argcp) {
     return;
   }
 
-  strcpy(envValue, equalsChar + 1);
+  strcpy(envValue, equalsChar + 1); // Copy args[0] value part into envValue
+																		// (part after =)
 
   for(int i = 2; i < argcp; i++) { // Support for spaces in env vars
-    strcat(envValue, " ");
+																	 // start at 2nd since 1st is the
+																	 // key=value pair
+    strcat(envValue, " ");   			 // Each arg is deliminated by a space
     strcat(envValue, args[i]);
   }
 
-  setenv(envKey, envValue, 1);
+  setenv(envKey, envValue, 1);     // Overwrite
 
   printf("%s=%s\n", envKey, envValue);
   free(envValue);
