@@ -1,0 +1,3 @@
+My plan of improvement involves removing magic numbers,
+adding more code documentation (and authorship),
+and un-refactoring the code to be in the constrained files.
