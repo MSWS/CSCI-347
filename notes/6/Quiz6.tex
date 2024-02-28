@@ -1,0 +1,176 @@
+\documentclass[10pt]{article}
+
+\usepackage[tmargin=0.1in, bmargin=0.25in, lmargin = 0.1in, rmargin = 0.25in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage{pstricks}
+\usepackage{makecell}
+\usepackage{caption}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+    \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+
+\makeatletter
+\renewcommand*\env@matrix[1][*\c@MaxMatrixCols c]{%
+    \hskip -\arraycolsep
+    \let\@ifnextchar\new@ifnextchar
+    \array{#1}}
+\makeatother
+
+\begin{document}
+\footnotesize
+\begin{multicols}{2}
+    \begin{minipage}{\columnwidth}
+        \normalsize
+        \subsection*{Parent and Child}
+        If the call to \textbf{fork()} is executed successfully:
+        \begin{itemize}
+            \item two identical copies of address space created
+            \item one for parent, one for child
+            \item both programs execute independently
+        \end{itemize}
+        \subsubsection*{Exit Functions}
+        Termination Status:
+        \begin{itemize}
+            \item normal: exit status
+            \item abnormal: kernel indicates reason
+        \end{itemize}
+        Child returns termination status to parent \\
+        (using wait or waitpid)
+        \subsubsection*{Termination Conditions}
+        A terminated process whose parent has not \\
+        waited for is a \textit{zombie}.
+        \begin{itemize}
+            \item parent can't check child's status
+            \item Kernel keeps minimal info of child process \\
+                  (pid, status, CPU time)
+        \end{itemize}
+        If parent terminates before child:
+        \begin{itemize}
+            \item Kernel assigns init (pid=1) to be parent of child
+            \item init's inherited child do not become zombies\\
+                  (wait() fetches status)
+        \end{itemize}
+        \subsubsection*{Zombies}
+        \begin{itemize}
+            \item A zombie does not use a lot of memory
+            \item The problem occurs when you have a lot of zombies
+            \item Limited PIDs
+        \end{itemize}
+
+        \subsection*{System Function}
+        Implemented by calling fork, exec, and waitpid.
+        \begin{lstlisting}
+#include <stdlib.h>
+int system(const char *cmdstring);
+  Returns:
+    -1 with errno if fork or waitpid fails
+    127 as if shell exit(127) if
+      shell cannot execute command
+    Termination status otherwise
+    \end{lstlisting}
+
+        \subsection*{Interpreter Files (Shebang)}
+        Script files that begin with:
+        \begin{itemize}
+            \item \texttt{\#!pathname [optional-argument]}
+            \item Eg: \texttt{\#!/bin/bash}, \texttt{\#!/bin/csh}
+        \end{itemize}
+        Allows users an easy and efficient way to execute some commands using
+        scripts.
+        Ensure file is executable: \texttt{chmod +x filename} \\
+        Execing a script file:
+        \texttt{execl("/bin/testinterp", "testinterp", "myarg1", NULL);}
+    \end{minipage}
+    \begin{minipage}{\columnwidth}
+        \subsection*{Threads}
+        \textbf{One process can have multithreads}
+        \begin{itemize}
+            \item Each thread handles a separate task
+            \item Threads have access to same memory address and file descriptors
+            \item Multithreaded process can run on a uniprocessor
+            \item Ex for word processor:
+                  \begin{itemize}
+                      \item Background thread checks spelling / grammar
+                      \item Foreground thread handles user input
+                      \item Third thread loads images from hard drive
+                      \item Fourth thread does automatic saves
+                  \end{itemize}
+        \end{itemize}
+        \subsubsection*{Identification}
+        A thread's ID is represented by \texttt{pthread\_t} type.
+        The \texttt{pthread\_equal} function is used to compare two IDs.
+
+        \begin{lstlisting}
+  #include <pthread.h>
+  int pthread_equal(pthread_t tid1, pthread_t tid2);
+      Returns:
+        nonzero if equal, 0 otherwise
+  pthread_t pthread_self(void);
+      Returns
+        thread ID of calling thread
+          \end{lstlisting}
+        \subsubsection*{Creation (pthread\_create(3))}
+        \begin{lstlisting}
+  #include <pthread.h>
+  int pthread_create(pthread_t *thread,
+      const pthread_attr_t *attr,
+      void *(*start_rtn)(void *), void *arg);
+        \end{lstlisting}
+        \begin{itemize}
+            \setlength{\itemsep}{0em}
+            \item \texttt{tidp}: new thread id
+            \item \texttt{attr}: thread attributes
+            \item \texttt{start\_rtn}: function to be executed
+            \item \texttt{arg}: argument to be passed to \texttt{start\_rtn}
+        \end{itemize}
+        \subsubsection*{Termination}
+        If any thread in a process calls \texttt{exit}, \texttt{\_exit}, or
+        \texttt{\_Exit}, the entire process terminates.
+        When default action is to terminate the process, a \texttt{signal}
+        sent to a thread will terminate the entire process.
+        A single thread can exit in three ways without affecting the entire process:
+        \begin{enumerate}
+            \item Thread can \texttt{return} from start routine, returned value is
+                  thread's exit status
+            \item Thread can be \texttt{canceled} by another thread in same process
+            \item Thread can call \texttt{pthread\_exit}
+        \end{enumerate}
+        \begin{lstlisting}
+  #include <pthread.h>
+  void pthread_exit(void *rval_ptr);
+  int pthread_join(pthread_t thread, void **rval_ptr);
+      /* similar to wait */
+      Returns: 0 if successful, error number otherwise
+  int pthread_cancel(pthread_t thread);
+      /* like pthread_exit with arg of PTHREAD_CANCELED */
+      Returns: 0 if successful, error number otherwise
+        \end{lstlisting}
+        \hspace*{-3em}
+        \begin{tabular}{|c|c|c|}
+            \hline
+            Process primitive & Thread primitive                & Description                            \\
+            \hline \hline
+            \texttt{fork}     & \texttt{pthread\_create}        & Create new flow of control             \\
+            \texttt{exit}     & \texttt{pthread\_exit}          & Exit from existing flow of control     \\
+            \texttt{waitpid}  & \texttt{pthread\_join}          & Wait for flow of control to terminate  \\
+            \texttt{atexit}   & \texttt{pthread\_cleanup\_push} & Register function to be called at exit \\
+            \texttt{getpid}   & \texttt{pthread\_self}          & Get ID of flow of control              \\
+            \texttt{abort}    & \texttt{pthread\_cancel}        & Terminate flow of control              \\
+            \hline
+        \end{tabular}
+
+        \subsubsection*{Cleanup}
+        \begin{lstlisting}
+  #include <pthread.h>
+  void pthread_cleanup_push(void (*rtn)(void *), void *arg);
+    /* Called when thread exits */
+  void pthread_cleanup_pop(int execute);
+    /* Removes cleanup handler establish by last
+       call to pthread_cleanup_push */
+  int pthread_detach(pthread_t thread);
+        \end{lstlisting}
+    \end{minipage}
+\end{multicols}
+\end{document}
