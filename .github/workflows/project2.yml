@@ -1,0 +1,22 @@
+name: Make and Compile
+
+on:
+  push:
+    paths:
+      - 'project2/**'
+      - '.github/workflows/project2.yml'
+  pull_request:
+    paths:
+      - 'project2/**'
+      - '.github/workflows/project2.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3  # Check out the code repository
+      - name: Build and Check Warnings
+        run: |
+          cd project2/
+          make CC=gcc CFLAGS="-Wall -Wextra -Werror"  # Use gcc, enable warnings, treat them as errors
+          echo "Build succeeded with no warnings!"
