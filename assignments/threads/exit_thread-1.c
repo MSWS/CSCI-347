@@ -1,3 +1,4 @@
+// Isaac Boaz
 /*This program should fetch the exit code from threads tid1 and tid2.
   Expected Output:
   thread 1 returning
@@ -37,8 +38,8 @@ int main()
         perror( "can't create thread 2");
   
 		pthread_join(tid1, &tret);
-    printf("thread 1 exit code %ld\n", (long)tret);
 		pthread_join(tid2, &tret);
+    printf("thread 1 exit code %ld\n", (long)tret);
     printf("thread 2 exit code %ld\n", (long)tret);
     exit(0);
 }
