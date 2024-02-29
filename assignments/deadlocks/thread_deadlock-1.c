@@ -1,3 +1,4 @@
+// Isaac Boaz
 /*
  This program does not use mutexes properly leading to a deadlock.
  Fix it.
@@ -30,7 +31,7 @@ void* thread2(void* arg)
 {  
     while(1)  
     {
-        pthread_mutex_lock(&mutex_a);
+        pthread_mutex_lock(&mutex_a); // Reorder mutexes to lock in the same order
         pthread_mutex_lock(&mutex_b);
   
         printf("[%lu]thread 2 is running! \n",time(NULL));  
