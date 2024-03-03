@@ -1,0 +1,28 @@
+name: Compile and Compare
+
+on:
+  push:
+    paths:
+      - 'project3/**'
+      - '.github/workflows/project3.yml'
+  pull_request:
+    paths:
+      - 'project3/**'
+      - '.github/workflows/project3.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3  # Check out the code repository
+      - name: Build and Check Warnings
+        run: |
+          cd project3/
+          make CC=gcc CFLAGS="-Wall -Wextra -Werror"  # Use gcc, enable warnings, treat them as errors
+      - name: Apply to all files
+        run: |
+          for file in sample_photos/* ; do
+            ./edge_detector $file
+            if [ -e sample_filtered_photos/$file ]; then
+              diff $file sample_filtered_photos/$file
+            fi
