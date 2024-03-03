@@ -6,8 +6,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#define LAPLACIAN_THREADS \
-  60  // change the number of threads as you run your concurrency experiment
+#define LAPLACIAN_THREADS 4 // change the number of threads as you run your concurrency experiment
 
 /* Laplacian filter is 3 by 3 */
 #define FILTER_WIDTH 3
@@ -20,18 +19,18 @@ typedef struct {
 } PPMPixel;
 
 struct parameter {
-  PPMPixel *image;          // original image pixel data
-  PPMPixel *result;         // filtered image pixel data
-  unsigned long int w;      // width of image
-  unsigned long int h;      // height of image
-  unsigned long int start;  // starting point of work
-  unsigned long int size;   // equal share of work (almost equal if odd)
+  PPMPixel *image;         // original image pixel data
+  PPMPixel *result;        // filtered image pixel data
+  unsigned long int w;     // width of image
+  unsigned long int h;     // height of image
+  unsigned long int start; // starting point of work
+  unsigned long int size;  // equal share of work (almost equal if odd)
 };
 
 struct file_name_args {
-  char *input_file_name;      // e.g., file1.ppm
-  char output_file_name[20];  // will take the form laplaciani.ppm, e.g.,
-                              // laplacian1.ppm
+  char *input_file_name;     // e.g., file1.ppm
+  char output_file_name[20]; // will take the form laplaciani.ppm, e.g.,
+                             // laplacian1.ppm
 };
 
 double total_elapsed_time = 0;
@@ -55,8 +54,7 @@ void *compute_laplacian_threadfn(void *params) {
   int startWork = obj->start;
   int endWork = startWork + (obj->size);
 
-  int laplacian[FILTER_WIDTH][FILTER_HEIGHT] = {
-      {-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
+  int laplacian[FILTER_WIDTH][FILTER_HEIGHT] = {{-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
 
   int red = 0;
   int green = 0;
@@ -65,18 +63,23 @@ void *compute_laplacian_threadfn(void *params) {
   int y_coordinate = 0;
 
   for (int row_iter = startWork; row_iter < endWork;
-       row_iter++) {  // iterate through the number of rows (ie. 1-> work)
-    if (row_iter == h) break;
-    for (int col_iter = 0; col_iter < w;
-         col_iter++) {  // iterate through the row (ie. 0->width)
-      for (int i = 0; i < FILTER_HEIGHT;
-           i++) {  // iterate through 2D laplacian array
-        for (int j = 0; j < FILTER_WIDTH; j++) {
-          x_coordinate = (col_iter - FILTER_WIDTH / 2 + j + w) % w;
-          y_coordinate = (row_iter - FILTER_HEIGHT / 2 + i + h) % h;
-          red += image[y_coordinate * w + x_coordinate].r * laplacian[i][j];
-          green += image[y_coordinate * w + x_coordinate].g * laplacian[i][j];
-          blue += image[y_coordinate * w + x_coordinate].b * laplacian[i][j];
+       row_iter++) { // iterate through the number of rows (ie. 1-> work)
+    if (row_iter == h)
+      break;
+    for (int iteratorImageWidth = 0; iteratorImageWidth < w;
+         iteratorImageWidth++) { // iterate through the row (ie. 0->width)
+      for (int iteratorImageHeight = 0; iteratorImageHeight < FILTER_HEIGHT;
+           iteratorImageHeight++) { // iterate through 2D laplacian array
+        for (int iteratorFilterWidth = 0; iteratorFilterWidth < FILTER_WIDTH;
+             iteratorFilterWidth++) {
+          x_coordinate = (iteratorImageWidth - FILTER_WIDTH / 2 + iteratorFilterWidth + w) % w;
+          y_coordinate = (row_iter - FILTER_HEIGHT / 2 + iteratorImageHeight + h) % h;
+          red += image[y_coordinate * w + x_coordinate].r *
+                 laplacian[iteratorImageHeight][iteratorFilterWidth];
+          green += image[y_coordinate * w + x_coordinate].g *
+                   laplacian[iteratorImageHeight][iteratorFilterWidth];
+          blue += image[y_coordinate * w + x_coordinate].b *
+                  laplacian[iteratorImageHeight][iteratorFilterWidth];
         }
       }
 
@@ -95,9 +98,9 @@ void *compute_laplacian_threadfn(void *params) {
         blue = 0;
 
       // add the filtered pixels to the result image
-      result[row_iter * w + col_iter].r = red;
-      result[row_iter * w + col_iter].g = green;
-      result[row_iter * w + col_iter].b = blue;
+      result[row_iter * w + iteratorImageWidth].r = red;
+      result[row_iter * w + iteratorImageWidth].g = green;
+      result[row_iter * w + iteratorImageWidth].b = blue;
 
       // reset each pixel value
       red = 0;
@@ -115,13 +118,12 @@ work=height/number of threads. If the size is not even, the last thread shall
 take the rest of the work. Compute the elapsed time and store it in *elapsedTime
 (Read about gettimeofday). Return: result (filtered image)
 */
-PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h,
-                        double *elapsedTime) {
+PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, double *elapsedTime) {
   struct timeval begin, end;
   gettimeofday(&begin, 0);
   int start = 0;
-  int work = h / LAPLACIAN_THREADS;  // work each thread handles
-  pthread_t t[LAPLACIAN_THREADS];    // create thread array
+  int work = h / LAPLACIAN_THREADS; // work each thread handles
+  pthread_t t[LAPLACIAN_THREADS];   // create thread array
   struct parameter data[LAPLACIAN_THREADS];
   PPMPixel *result = malloc(w * h * sizeof(PPMPixel));
   for (int ii = 0; ii < LAPLACIAN_THREADS; ii++) {
@@ -131,20 +133,19 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h,
     data[ii].result = result;
     data[ii].image = image;
     data[ii].size = work;
-    if (ii == LAPLACIAN_THREADS - 1) {  // set the work of last thread to equal
-                                        // height - last starting point
+    if (ii == LAPLACIAN_THREADS - 1) { // set the work of last thread to equal
+                                       // height - last starting point
       data[ii].size = h - start;
     }
     if (pthread_create(&t[ii], NULL, compute_laplacian_threadfn,
                        (void *)&data[ii]) !=
-        0)  // create thread and each thread calls compute_laplacian_threadfn
+        0) // create thread and each thread calls compute_laplacian_threadfn
       printf("Unable to create thread %d\n", ii);
     start = start + work;
   }
 
-  for (int i = 0; i < LAPLACIAN_THREADS; i++) {
-    pthread_join(t[i], NULL);  // join threads
-  }
+  for (int i = 0; i < LAPLACIAN_THREADS; i++)
+    pthread_join(t[i], NULL); // join threads
 
   gettimeofday(&end, 0);
   long sec = end.tv_sec - begin.tv_sec;
@@ -198,15 +199,12 @@ Return: pointer to PPMPixel that has the pixel data of the input image
 bottom) in 3-byte chunks (r g b values for each pixel) encoded as binary
 numbers.
 */
-PPMPixel *read_image(const char *filename, unsigned long int *width,
-                     unsigned long int *height) {
+PPMPixel *read_image(const char *filename, unsigned long int *width, unsigned long int *height) {
   FILE *fp;
   PPMPixel *img;
   unsigned long int w, h;
   char buf[1024];
-  int line = 0;
   int component;
-  unsigned char buffer[3];
 
   fp = fopen(filename, "rb");
 
@@ -223,7 +221,8 @@ PPMPixel *read_image(const char *filename, unsigned long int *width,
 
   // skip comments
   fgets(buf, sizeof(buf), fp);
-  while (strstr(buf, "#") == NULL) fgets(buf, sizeof(buf), fp);
+  while (strstr(buf, "#") == NULL)
+    fgets(buf, sizeof(buf), fp);
 
   // get height and width
   int num;
@@ -267,12 +266,10 @@ passed third during the input shall be called "laplacian3.ppm".
 */
 void *manage_image_file(void *args) {
   struct parameter data;
-  data.image = read_image(((struct file_name_args *)args)->input_file_name,
-                          &data.w, &data.h);
+  data.image = read_image(((struct file_name_args *)args)->input_file_name, &data.w, &data.h);
   data.result = apply_filters(data.image, data.w, data.h, &total_elapsed_time);
 
-  write_image(data.result, ((struct file_name_args *)args)->output_file_name,
-              data.w, data.h);
+  write_image(data.result, ((struct file_name_args *)args)->output_file_name, data.w, data.h);
 
   free(data.image);
   free(data.result);
@@ -291,26 +288,22 @@ int main(int argc, char *argv[]) {
     printf("Usage: ./a.out filename[s]");
     exit(1);
   }
-  FILE *fp;
-  PPMPixel *img;
   pthread_t t[argc - 1];
-  struct file_name_args
-      arguments[argc - 1];  // create an array of struct file infos to pass to
-                            // thread functions
+  struct file_name_args arguments[argc - 1]; // create an array of struct file infos to pass to
+                                             // thread functions
   int err = 0;
   for (int i = 0; i < argc - 1; i++) {
     arguments[i].input_file_name = argv[i + 1];
-    snprintf(arguments[i].output_file_name,
-             sizeof(arguments[i].output_file_name) + sizeof(int),
-             "laplacian%d.ppm", (i + 1));  // create the output file name
+    snprintf(arguments[i].output_file_name, sizeof(arguments[i].output_file_name) + sizeof(int),
+             "laplacian%d.ppm", (i + 1)); // create the output file name
     err = pthread_create(&t[i], NULL, manage_image_file,
-                         (void *)&arguments[i]);  // create threads
+                         (void *)&arguments[i]); // create threads
     if (err != 0) {
       perror("cannot create thread\n");
     }
   }
 
-  for (int i = 0; i < argc - 1; i++)  // Wait for all threads to finish
+  for (int i = 0; i < argc - 1; i++) // Wait for all threads to finish
     pthread_join(t[i], NULL);
 
   printf("elapsed time: %.4f\n", total_elapsed_time);

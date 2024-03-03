@@ -19,10 +19,4 @@ jobs:
         run: |
           cd project3/
           make CC=gcc CFLAGS="-Wall -Wextra -Werror"  # Use gcc, enable warnings, treat them as errors
-      - name: Apply to all files
-        run: |
-          for file in sample_photos/* ; do
-            ./edge_detector $file
-            if [ -e sample_filtered_photos/$file ]; then
-              diff $file sample_filtered_photos/$file
-            fi
+          make test
