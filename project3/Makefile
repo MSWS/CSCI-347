@@ -1,4 +1,4 @@
-a.out:
+a.out: edge_detector.c
 	gcc -Wall -g -o a.out edge_detector.c
 
 test: a.out

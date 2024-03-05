@@ -72,6 +72,7 @@ void *compute_laplacian_threadfn(void *params) {
            iteratorImageHeight++) { // Each row
         for (int iteratorFilterWidth = 0; iteratorFilterWidth < FILTER_WIDTH;
              iteratorFilterWidth++) {
+					// We love triple for loops
           x_coordinate = (iteratorImageWidth - FILTER_WIDTH / 2 + iteratorFilterWidth + width) % width;
           y_coordinate = (row_iter - FILTER_HEIGHT / 2 + iteratorImageHeight + h) % h;
           red += image[y_coordinate * width + x_coordinate].r *
@@ -83,26 +84,16 @@ void *compute_laplacian_threadfn(void *params) {
         }
       }
 
-      // Truncate values smaller than zero to zero and larger than 255 to 255.
-      if (red > 255)
-        red = 255;
-      else if (red < 0)
-        red = 0;
-      if (green > 255)
-        green = 255;
-      else if (green < 0)
-        green = 0;
-      if (blue > 255)
-        blue = 255;
-      else if (blue < 0)
-        blue = 0;
+      // Clap values to be [0, 255]
+			red = red > 255 ? 255 : red < 0 ? 0 : red;
+			green = green > 255 ? 255 : green < 0 ? 0 : green;
+			blue = blue > 255 ? 255 : blue < 0 ? 0 : blue;
 
-      // add the filtered pixels to the result image
+      // Output filtered pixels to result image
       result[row_iter * width + iteratorImageWidth].r = red;
       result[row_iter * width + iteratorImageWidth].g = green;
       result[row_iter * width + iteratorImageWidth].b = blue;
 
-      // reset each pixel value
       red = 0;
       green = 0;
       blue = 0;
@@ -121,11 +112,13 @@ take the rest of the work. Compute the elapsed time and store it in *elapsedTime
 PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, double *elapsedTime) {
   struct timeval begin, end;
   gettimeofday(&begin, 0);
+
   int start = 0;
   int work = h / LAPLACIAN_THREADS; // work each thread handles
   pthread_t t[LAPLACIAN_THREADS];   // create thread array
   struct parameter data[LAPLACIAN_THREADS];
   PPMPixel *result = malloc(w * h * sizeof(PPMPixel));
+
   for (int i = 0; i < LAPLACIAN_THREADS; i++) {
     data[i].w = w;
     data[i].h = h;
@@ -133,12 +126,11 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
     data[i].result = result;
     data[i].image = image;
     data[i].size = work;
-    if (i == LAPLACIAN_THREADS - 1)  // set the work of last thread to equal
-                                      // height - last starting point
+    if (i == LAPLACIAN_THREADS - 1)  // set the work of last thread to equal height - last starting point
       data[i].size = h - start;
     if (pthread_create(&t[i], NULL, compute_laplacian_threadfn,
-                       (void *)&data[i]) !=
-        0) // create thread and each thread calls compute_laplacian_threadfn
+                       (void *)&data[i]) != 0)
+			// create thread and each thread calls compute_laplacian_threadfn
       printf("Unable to create thread %d\n", i);
     start = start + work;
   }
@@ -213,10 +205,16 @@ PPMPixel *read_image(const char *filename, unsigned long int *width, unsigned lo
   }
 
   // get image format
-  if (fgets(buf, sizeof(buf), fp) == NULL)
+  if (fgets(buf, sizeof(buf), fp) == NULL) {
     perror("fgets error\n");
-  else if (buf[0] != 'P' && buf[1] != '6')
+    fclose(fp);
+		exit(1);
+	}
+  else if (buf[0] != 'P' || buf[1] != '6') {
     printf("Invalid image format (must be 'P6')\n");
+    fclose(fp);
+		exit(1);
+	}
 
   // skip comments
   fgets(buf, sizeof(buf), fp);
@@ -236,18 +234,16 @@ PPMPixel *read_image(const char *filename, unsigned long int *width, unsigned lo
   if (fgets(buf, sizeof(buf), fp) == NULL) {
     perror("fgets error\n");
   } else if (sscanf(buf, "%d", &component) == 1) {
-    if (component != RGB_COMPONENT_COLOR) {
+    if (component != RGB_COMPONENT_COLOR)
       printf("Invalid rgb component color\n");
-    }
   }
   // read up to sizeof(buffer) bytes
   int img_size = (*width) * (*height) * sizeof(PPMPixel);
   img = malloc(img_size);
-  PPMPixel *pixel = malloc(3);
+  PPMPixel *pixel = malloc(sizeof(PPMPixel));
   for (int i = 0; i < ((*width) * (*height)); i++) {
-    if (fread(pixel, sizeof(char), sizeof(PPMPixel), fp) == 0) {
+    if (fread(pixel, sizeof(char), sizeof(PPMPixel), fp) == 0)
       perror("end of file!\n");
-    }
     img[i] = *pixel;
   }
 
