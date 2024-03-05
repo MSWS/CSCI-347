@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#define LAPLACIAN_THREADS 4 // change the number of threads as you run your concurrency experiment
+#define LAPLACIAN_THREADS 60 // change the number of threads as you run your concurrency experiment
 
 /* Laplacian filter is 3 by 3 */
 #define FILTER_WIDTH 3
@@ -49,7 +49,7 @@ void *compute_laplacian_threadfn(void *params) {
   struct parameter *obj = (struct parameter *)params;
   PPMPixel *image = obj->image;
   PPMPixel *result = obj->result;
-  unsigned long int w = obj->w;
+  unsigned long int width = obj->w;
   unsigned long int h = obj->h;
   int startWork = obj->start;
   int endWork = startWork + (obj->size);
@@ -63,22 +63,22 @@ void *compute_laplacian_threadfn(void *params) {
   int y_coordinate = 0;
 
   for (int row_iter = startWork; row_iter < endWork;
-       row_iter++) { // iterate through the number of rows (ie. 1-> work)
+       row_iter++) { // Each row we are supposed to do 
     if (row_iter == h)
       break;
-    for (int iteratorImageWidth = 0; iteratorImageWidth < w;
-         iteratorImageWidth++) { // iterate through the row (ie. 0->width)
+    for (int iteratorImageWidth = 0; iteratorImageWidth < width;
+         iteratorImageWidth++) { // Each column
       for (int iteratorImageHeight = 0; iteratorImageHeight < FILTER_HEIGHT;
-           iteratorImageHeight++) { // iterate through 2D laplacian array
+           iteratorImageHeight++) { // Each row
         for (int iteratorFilterWidth = 0; iteratorFilterWidth < FILTER_WIDTH;
              iteratorFilterWidth++) {
-          x_coordinate = (iteratorImageWidth - FILTER_WIDTH / 2 + iteratorFilterWidth + w) % w;
+          x_coordinate = (iteratorImageWidth - FILTER_WIDTH / 2 + iteratorFilterWidth + width) % width;
           y_coordinate = (row_iter - FILTER_HEIGHT / 2 + iteratorImageHeight + h) % h;
-          red += image[y_coordinate * w + x_coordinate].r *
+          red += image[y_coordinate * width + x_coordinate].r *
                  laplacian[iteratorImageHeight][iteratorFilterWidth];
-          green += image[y_coordinate * w + x_coordinate].g *
+          green += image[y_coordinate * width + x_coordinate].g *
                    laplacian[iteratorImageHeight][iteratorFilterWidth];
-          blue += image[y_coordinate * w + x_coordinate].b *
+          blue += image[y_coordinate * width + x_coordinate].b *
                   laplacian[iteratorImageHeight][iteratorFilterWidth];
         }
       }
@@ -98,9 +98,9 @@ void *compute_laplacian_threadfn(void *params) {
         blue = 0;
 
       // add the filtered pixels to the result image
-      result[row_iter * w + iteratorImageWidth].r = red;
-      result[row_iter * w + iteratorImageWidth].g = green;
-      result[row_iter * w + iteratorImageWidth].b = blue;
+      result[row_iter * width + iteratorImageWidth].r = red;
+      result[row_iter * width + iteratorImageWidth].g = green;
+      result[row_iter * width + iteratorImageWidth].b = blue;
 
       // reset each pixel value
       red = 0;
@@ -126,21 +126,20 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
   pthread_t t[LAPLACIAN_THREADS];   // create thread array
   struct parameter data[LAPLACIAN_THREADS];
   PPMPixel *result = malloc(w * h * sizeof(PPMPixel));
-  for (int ii = 0; ii < LAPLACIAN_THREADS; ii++) {
-    data[ii].w = w;
-    data[ii].h = h;
-    data[ii].start = start;
-    data[ii].result = result;
-    data[ii].image = image;
-    data[ii].size = work;
-    if (ii == LAPLACIAN_THREADS - 1) { // set the work of last thread to equal
-                                       // height - last starting point
-      data[ii].size = h - start;
-    }
-    if (pthread_create(&t[ii], NULL, compute_laplacian_threadfn,
-                       (void *)&data[ii]) !=
+  for (int i = 0; i < LAPLACIAN_THREADS; i++) {
+    data[i].w = w;
+    data[i].h = h;
+    data[i].start = start;
+    data[i].result = result;
+    data[i].image = image;
+    data[i].size = work;
+    if (i == LAPLACIAN_THREADS - 1)  // set the work of last thread to equal
+                                      // height - last starting point
+      data[i].size = h - start;
+    if (pthread_create(&t[i], NULL, compute_laplacian_threadfn,
+                       (void *)&data[i]) !=
         0) // create thread and each thread calls compute_laplacian_threadfn
-      printf("Unable to create thread %d\n", ii);
+      printf("Unable to create thread %d\n", i);
     start = start + work;
   }
 
@@ -266,15 +265,17 @@ passed third during the input shall be called "laplacian3.ppm".
 */
 void *manage_image_file(void *args) {
   struct parameter data;
-  data.image = read_image(((struct file_name_args *)args)->input_file_name, &data.w, &data.h);
+	struct file_name_args* fileNameArg = (struct file_name_args*) args;
+  data.image = read_image(fileNameArg->input_file_name, &data.w, &data.h);
   data.result = apply_filters(data.image, data.w, data.h, &total_elapsed_time);
 
-  write_image(data.result, ((struct file_name_args *)args)->output_file_name, data.w, data.h);
+  write_image(data.result, fileNameArg->output_file_name, data.w, data.h);
 
   free(data.image);
   free(data.result);
   return NULL;
 }
+
 /*The driver of the program. Check for the correct number of arguments. If wrong
    print the message: "Usage ./a.out filename[s]" It shall accept n filenames as
    arguments, separated by whitespace, e.g., ./a.out file1.ppm file2.ppm
