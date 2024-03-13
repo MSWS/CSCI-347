@@ -73,6 +73,7 @@ void *compute_laplacian_threadfn(void *params) {
         for (int iteratorFilterWidth = 0; iteratorFilterWidth < FILTER_WIDTH;
              iteratorFilterWidth++) {
 					// We love triple for loops
+					// I love QUADRUPLE for loop
           x_coordinate = (iteratorImageWidth - FILTER_WIDTH / 2 + iteratorFilterWidth + width) % width;
           y_coordinate = (row_iter - FILTER_HEIGHT / 2 + iteratorImageHeight + h) % h;
           red += image[y_coordinate * width + x_coordinate].r *
@@ -141,7 +142,7 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
   gettimeofday(&end, 0);
   long sec = end.tv_sec - begin.tv_sec;
   long microsec = end.tv_usec - begin.tv_usec;
-  *elapsedTime += sec + microsec * 1e-6;
+  *elapsedTime += sec + microsec / 1000000.0;
 
   return result;
 }
@@ -155,14 +156,12 @@ PPMPixel *apply_filters(PPMPixel *image, unsigned long w, unsigned long h, doubl
         */
 void write_image(PPMPixel *image, char *filename, unsigned long int width,
                  unsigned long int height) {
-  const char *type = "P6";
-
   FILE *fp = fopen(filename, "wb");
   if (!fp) {
     fprintf(stderr, "Unable to open file '%s' for writing\n", filename);
     exit(1);
   }
-  fprintf(fp, "%s\n", type);
+  fprintf(fp, "P6\n");
   fprintf(fp, "%ld %ld\n", width, height);
   fprintf(fp, "%d\n", RGB_COMPONENT_COLOR);
   for (int i = 0; i < width * height; i++) {
@@ -282,7 +281,7 @@ void *manage_image_file(void *args) {
         */
 int main(int argc, char *argv[]) {
   if (argc == 1) {
-    printf("Usage: ./a.out filename[s]");
+    printf("Usage: %s filename[s]\n", argv[0]);
     exit(1);
   }
   pthread_t t[argc - 1];
@@ -295,9 +294,8 @@ int main(int argc, char *argv[]) {
              "laplacian%d.ppm", (i + 1)); // create the output file name
     err = pthread_create(&t[i], NULL, manage_image_file,
                          (void *)&arguments[i]); // create threads
-    if (err != 0) {
+    if (err != 0)
       perror("cannot create thread\n");
-    }
   }
 
   for (int i = 0; i < argc - 1; i++) // Wait for all threads to finish
