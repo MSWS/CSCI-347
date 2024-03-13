@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#define LAPLACIAN_THREADS 60 // change the number of threads as you run your concurrency experiment
+#define LAPLACIAN_THREADS 32 // change the number of threads as you run your concurrency experiment
 
 /* Laplacian filter is 3 by 3 */
 #define FILTER_WIDTH 3
@@ -84,7 +84,7 @@ void *compute_laplacian_threadfn(void *params) {
         }
       }
 
-      // Clap values to be [0, 255]
+      // Clamp values to be [0, 255]
 			red = red > 255 ? 255 : red < 0 ? 0 : red;
 			green = green > 255 ? 255 : green < 0 ? 0 : green;
 			blue = blue > 255 ? 255 : blue < 0 ? 0 : blue;
