@@ -1,0 +1,171 @@
+\documentclass{article}
+
+\usepackage{pgfplots}
+\usepackage[utf8]{inputenc}
+\usepackage{csvsimple}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+
+\title{Edge Detector Concurrency Report}
+\author{Isaac Boaz}
+\pgfplotsset{compat=1.18} % Adjust compatibility if needed
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+    The goal of the edge detector project was to implement a concurrent edge
+    detector program utilizing a laplacian filter.
+\end{abstract}
+
+\section{Structure}
+
+The structure of the program follows basic C programming requirements.
+Each function was written to complete its assigned task with no side effects.
+The basic workflow of the program is as follows:
+\begin{enumerate}
+    \item Call the program with the PPM file paths to be processed.
+    \item Create a \texttt{file\_name\_args} struct array for each file argument.
+    \item Populate the array with appropriate file information.
+    \item Create a thread for each file argument.
+          \begin{enumerate}[label=4.\arabic*.]
+              \item Each thread reads in the image.
+              \item Creates \texttt{LAPLACIAN\_THREADS} threads to process the image.
+              \item Feeds the image to the laplacian filter threads with the appropriate
+                    row range.
+          \end{enumerate}
+    \item Waits for all threads to finish.
+\end{enumerate}
+
+\subsection{Global Variables}
+
+The one global variable used in this program is \texttt{total\_elapsed\_time},
+which is responsible for tracking the total time taken to process all images.
+All other references to globals are constant defines.
+
+\subsection{Functions}
+\subsubsection{compute\_laplacian\_threadfn}
+This function is responsible for doing the actual laplacian filter computation.
+Given a \texttt{parameter struct} pointer, it iterates from the given \texttt{start}
+through to the \texttt{end} and applies the laplacian filter to each pixel.
+
+As the image is passed by reference, the function does not return anything.
+
+\subsubsection{apply\_filters}
+This function is responsible for creating the threads that will apply the laplacian
+filter. It takes in pointers to an image, its dimensions, and a pointer to
+the \texttt{elapsedTime} double.
+
+The function creates \texttt{LAPLACIAN\_THREADS} threads and assigns each thread
+a range of rows to process. The function then waits for all threads to finish.
+Lastly, the function calculates the total time taken to process the image and
+updates the \texttt{elapsedTime} pointer respectively.
+
+\subsubsection{write\_image}
+This function is responsible for writing a given \texttt{PPMPixel struct} given
+a filename, widht, and height. A hardcoded \texttt{"P6"} is written to the file,
+as well as the provided width, height, and maximum color value.
+
+\subsubsection{read\_image}
+Much like \texttt{write\_image}, this function is responsible for reading in
+a \texttt{PPMPixel struct} from a given filename. The function reads in the
+file header and then reads in the pixel data.
+
+If the file does not contain the valid \texttt{"P6"} header, the function
+exits early.
+
+\subsubsection{manage\_image\_file}
+This function is a basic wrapper around \texttt{read\_image},
+\texttt{apply\_filters}, \\
+and \texttt{write\_image}. It takes in a \texttt{file\_name\_args struct}
+pointer and calls the aforementioned functions in order.
+
+\subsubsection{main}
+This function is responsible for parsing the command line arguments and
+creating the necessary threads to process each image.
+
+\section{Concurrency}
+Concurrency is an important aspect of this program and how it achieves
+efficency. Multhreading is heavily used to allow for processing multiple images
+at multiple times.
+
+\subsection{Threads}
+As described in the above functions and structure, one thread is used for each
+image file provided, with that thread creating subsequent threads to handle each
+image.
+
+As a result, the number of threads created can be calculated as follows:
+\begin{equation*}
+    \text{num\_threads} = \text{num\_files} + \text{num\_files} \times \text{LAPLACIAN\_THREADS}
+\end{equation*}
+
+An analysis of how the value of \texttt{LAPLACIAN\_THREADS} affects the program
+is provded in \autoref{sec:Results}.
+
+\subsection{Race Conditions}
+Race conditions were avoided by ensuring that each thread was given a unique
+range of rows to process. This was done by calculating the number of rows
+to process and then dividing that number by the number of threads to create
+per image.
+
+Since there are no global variables used for storing arrays or data, (all
+image is passed by reference), there is no possibility of a race condition
+occurring.
+
+\section{Experiments}
+The experiment run was executed on Western Washington University's Lab Machines. Specifically,
+the \texttt{cf167-23} was used for this experiment. All tests used the same base image (cayuga\_1.ppm)
+which was 1440060 bytes in size.
+
+\subsection{Conditions}
+The primary question to be answered by the experiment was how the number of threads used
+to process the laplacian filter affected the total time taken to process the image.
+
+The number of threads used to process the laplacian filter was varied from 1 up to 1028 threads.
+With each variance, the edge detector was ran 100 times and the average time taken to process the image
+was recorded.
+
+\section{Results}
+\label{sec:Results}
+
+The results of the experiment are graphed in \autoref{fig:Results}.
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+                xlabel={Threads},
+                ylabel={Seconds},
+                title={Seconds vs. Threads}
+            ]
+            \addplot+ table [x=Threads, y=Total, col sep=comma] {data.csv};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Seconds vs. Threads}
+    \label{fig:Results}
+\end{figure}
+
+\section{Results Analysis}
+Based on the results, it is clear that the number of threads used to process the laplacian filter
+has a significant impact on the total time taken to process the image. As the number of threads
+increases from 1 to 64, the total time taken to process the image decreases. However, after 64 threads,
+the total time taken to process the image increases as the number of threads increases.
+
+It should be noted that the results of this experiment may vary depending on the image used.
+Outside of software differences, the hardware used to run the experiment may also affect the results.
+
+\section{Conclusion}
+This program was successfully able to utilize an arbitrary amount of threads (greater than zero) to
+appropriately process an image using a laplacian filter. The results show that the performance of
+program is signficatnly altered off of the number of threads used.
+
+It is likely that the number of threads used could be optimized based off the image size. Further
+experiments could be run to determine the optimal number of threads to use for a given image size.
+
+Additionally, experiments for how the program handles multiple images at once
+(instead of one at a time many times) could be run to determine how the program
+scales with multiple images.
+
+\end{document}

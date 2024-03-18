@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{pgfplots}
+\usepackage[utf8]{inputenc}
+\usepackage{csvsimple}
+\usepackage{tikz}
+
+\pgfplotsset{compat=1.18} % Adjust compatibility if needed
+
+\begin{document}
+
+\begin{tikzpicture}
+    \begin{axis}[
+            xlabel={Threads},
+            ylabel={Seconds},
+            title={Seconds vs. Threads}
+        ]
+        \addplot+ table [x=Threads, y=Total, col sep=comma] {data.csv};
+    \end{axis}
+\end{tikzpicture}
+
+\end{document}
